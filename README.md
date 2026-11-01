@@ -8,7 +8,7 @@
 
 ![status](https://img.shields.io/badge/status-in%20progress-yellow)
 ![phase](https://img.shields.io/badge/phase-C%20%7C%20PID%20baseline-blue)
-![progress](https://img.shields.io/badge/progress-24%2F57%20steps-orange)
+![progress](https://img.shields.io/badge/progress-25%2F57%20steps-orange)
 ![python](https://img.shields.io/badge/python-3.14-3776AB)
 ![solver](https://img.shields.io/badge/NLP-CasADi%20%2B%20IPOPT-informational)
 
@@ -36,12 +36,12 @@ It's deliberately **not** a 6-DoF, aerodynamically exact rocket simulator — se
 
 ## 📊 Progress
 
-**24 / 57 steps done — Phase C (PID baseline) in progress.**
+**25 / 57 steps done — Phase C (PID baseline) in progress.**
 
 ```
 Phase A  Setup & housekeeping        ████████████████████ 8/8   ✅
 Phase B  Physics & simulator         ████████████████████ 14/14 ✅
-Phase C  Baseline PID controller     ██████████████░░░░░░ 2/7   🔧 current
+Phase C  Baseline PID controller     █████████░░░░░░░░░░░ 3/7   🔧 current
 Phase D  Transition to MPC (CasADi)  ░░░░░░░░░░░░░░░░░░░░ 0/10
 Phase E  Experiments & robustness    ░░░░░░░░░░░░░░░░░░░░ 0/11
 Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░░░░░░░ 0/7
@@ -84,12 +84,12 @@ Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░�
 </details>
 
 <details open>
-<summary><b>🔧 Phase C — Baseline PID controller</b> (2/7, current phase)</summary>
+<summary><b>🔧 Phase C — Baseline PID controller</b> (3/7, current phase)</summary>
 
 - [x] Landing target definition (`reference.py`): pad at origin, zero velocity
 - [x] Simple PID on vertical velocity (`controllers/pid.py`)
-- [ ] Closed-loop PID test (vertical motion only) ← **next step**
-- [ ] Extend PID to horizontal position (x, y)
+- [x] Closed-loop PID test (vertical motion only): stable touchdown at -8.06 m/s, not yet soft but no divergence
+- [ ] Extend PID to horizontal position (x, y) ← **next step**
 - [ ] Closed-loop simulation: state → controller → physics
 - [ ] First landing metrics (`metrics.py`)
 - [ ] First full PID landing, plotted and evaluated

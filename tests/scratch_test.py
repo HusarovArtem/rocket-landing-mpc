@@ -6,10 +6,10 @@ from rocket_landing.simulation import simulate_vertical_pid
 
 
 p = VehicleParams()
-pid = PIDController(kp=5000.0, ki=0.0, kd=2500.0)
+pid = PIDController(kp=1400.0, ki=100.0, kd=2000.0)
 
 # Same starting point at step 21: at rest, 500 m up
-state0 = np.array([0.0, 0.0, 500.0, 0.0, 0.0, 0.0, p.initial_mass])
+state0 = np.array([0.0, 0.0, 500.0, 0.0, 0.0, -50.0, p.initial_mass])
 
 times, states = simulate_vertical_pid(state0, pid, p, dt=0.05)
 

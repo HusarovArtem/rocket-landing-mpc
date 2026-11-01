@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 25**
+**AKTUALNY KROK: 26**
 
 ## Faza A — Setup i porządki
 
@@ -101,9 +101,19 @@ CasADi/IPOPT, struktura katalogów na miejscu.* ✅ ZALICZONY
 - [x] 24. Prosty PID na prędkość pionową (`controllers/pid.py`). Zweryfikowany
       w konsoli: 3x ta sama error=5.0 → 10.25, 10.5, 10.75 (zgodne z ręcznym
       rachunkiem, narastanie o 0.25 dzięki członowi I) ✓.
-- [ ] 25. Test PID w zamkniętej pętli — tylko ruch pionowy, ręczne dostrojenie.
-      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
+- [x] 25. Test PID w zamkniętej pętli — tylko ruch pionowy, ręczne dostrojenie.
+      Po drodze znaleziony i naprawiony realny bug: brak zatrzymania
+      symulacji przy wyczerpaniu paliwa (`mass <= dry_mass`) powodował,
+      że masa schodziła w głęboki minus, a dzielenie przez ujemną masę
+      w `dynamics()` dawało fizycznie absurdalne wyniki (vz=-7053 m/s).
+      Po poprawce i kilku iteracjach (kp/ki/kd): finalnie kp=1500,
+      ki=50, kd=800, start z vz=-50 m/s na 500 m → lądowanie po 18.6 s,
+      touchdown vz=-8.06 m/s, mass=23164 kg (paliwo z zapasem). Nie jest
+      to jeszcze "miękkie" lądowanie (cel z planu: ≤1 m/s), ale pętla
+      zamknięta działa stabilnie, bez rozbiegania ✓. Dalsze dostrojenie
+      w kolejnych krokach.
 - [ ] 26. Rozszerzenie PID na pozycję poziomą (x, y).
+      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
 - [ ] 27. Pętla symulacji w zamkniętym obiegu (`simulation.py`): stan → regulator
       → fizyka.
 - [ ] 28. Pierwsza wersja `metrics.py`: błąd lądowania, prędkość przyziemienia,

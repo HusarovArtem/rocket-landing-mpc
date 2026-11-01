@@ -88,5 +88,9 @@ def simulate_vertical_pid(state0, pid, params, dt, max_steps=100000):
         if next_state[2] <= 0.0:
             break
 
+        if next_state[6] <= params.dry_mass:
+            # Ran out of fuel before landing - stop here
+            break
+
     return np.array(times), np.array(states)
 
