@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 26**
+**AKTUALNY KROK: 28**
 
 ## Faza A — Setup i porządki
 
@@ -112,12 +112,25 @@ CasADi/IPOPT, struktura katalogów na miejscu.* ✅ ZALICZONY
       to jeszcze "miękkie" lądowanie (cel z planu: ≤1 m/s), ale pętla
       zamknięta działa stabilnie, bez rozbiegania ✓. Dalsze dostrojenie
       w kolejnych krokach.
-- [ ] 26. Rozszerzenie PID na pozycję poziomą (x, y).
-      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
-- [ ] 27. Pętla symulacji w zamkniętym obiegu (`simulation.py`): stan → regulator
-      → fizyka.
+- [x] 26. Rozszerzenie PID na pozycję poziomą (x, y) — `pid_x`/`pid_y` na błąd
+      pozycji (kp=500, kd=2000 każdy), ciąg wciąż z `pid_vz`, `alpha`/`beta`
+      z małokątowego przybliżenia `desired_force / thrust`.
+- [x] 27. Pętla symulacji w zamkniętym obiegu (`simulate_pid` w `simulation.py`):
+      stan → trzy PID → fizyka. Po drodze znaleziony i naprawiony realny
+      bug podczas testowania (nie literówka transkrypcji, ale logiczny błąd):
+      `desired_fy` liczone przez `pid_x.compute(...)` zamiast `pid_y.compute(...)`
+      — przy starcie z `y=0` błąd był niewidoczny (błąd y = 0 od początku),
+      ujawnił się dopiero po teście ze startem `x=100, y=50`. Po poprawce:
+      start (x=100, y=50, z=500, vz=-50) → lądowanie po 17.85 s,
+      touchdown x=-27.3 m, y=-13.7 m (obie osie z wyraźnym przeregulowaniem/
+      overshoot, symetrycznie — te same wzmocnienia), vz=-9.59 m/s (wciąż
+      nie "miękkie"), masa=23228 kg (paliwo z zapasem). Pętla zamknięta
+      działa stabilnie na obu osiach, bez rozbiegania ✓. Dalsze dostrojenie
+      (przeregulowanie x/y, zbyt duże vz przy dotknięciu) odłożone na
+      kolejne kroki/fazy.
 - [ ] 28. Pierwsza wersja `metrics.py`: błąd lądowania, prędkość przyziemienia,
       zużycie paliwa.
+      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
 - [ ] 29. Wykres i ocena pierwszego pełnego lądowania z PID (3D + przebiegi
       czasowe).
 

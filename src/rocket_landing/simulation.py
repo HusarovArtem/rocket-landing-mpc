@@ -94,3 +94,70 @@ def simulate_vertical_pid(state0, pid, params, dt, max_steps=100000):
 
     return np.array(times), np.array(states)
 
+def simulate_pid(state0, pid_vz, pid_x, pid_y, params, dt, max_steps=100000):
+    """
+    Full 3D closed-loop landing attempt: the vertical PID (pid_vz) still
+    controls vz exactly like in step 25 (thrust = hover_thrust + correction)
+    but now TWO more PID controllers steer the rocket sideways, back toward
+    x=0, y=0 (the landing pad), by commanding the tilt angles alpha and beta.
+
+    Key diff from pid_vz: pid_x and pid_y are given a POSITION error target_x
+    - x), not a velocity error. Why this works without a separate "kill the
+    horizontal velocity" step: look at what the D term of a PID on POSITION
+    actually computes; derivative = (error_now - error_prex) / dt
+                                  = d(target - x)/dt - -dx/dt = -vx
+
+   So kd_x * derivative is really "kd_x * (-vx)" - a term that AUTOMACALLY
+   pushes against whatever horizontal velocity currently exists, exactly
+   like a shock absorber / damper. A plain PID on position is secretly
+   also damping velocity, with no extra code needed - this is why we
+   don't need a 4th controller.
+
+   Converting a desired horizontal FORCE into an ANGLE: thrust_direction
+   makes thrust's x-component equal to `thrust * sin(alpha) * cos(beta)`.
+   For the small angles  we're restricted to anyway (max_tilt_angle is only
+   ~20 degrees), sin(x) ~= x and cos(x) ~= 1, so thrust_x ~= thrust * alpha
+   => alpha ~= desired_Fx / thrust deliberate simplification worth remembering
+   if later testing reveals coupling issues between the lateral and vertical motion
+   """
+    times = [0.0]
+    states = [np.array(state0, dtype=float)]
+
+    for i in range(max_steps):
+        current_state = states[-1]
+        x, y, z = current_state[0:3]
+        vz = current_state[5]
+        mass = current_state[6]
+
+        # --- vertical control (unchanged from step 25) ---
+        vz_error = 0.0 - vz
+        vz_correction = pid_vz.compute(vz_error, dt)
+        thrust = mass * params.g + vz_correction
+
+        # -- horizontal control (new) ---
+        x_error = 0.0 - x
+        y_error = 0.0 - y
+        desired_fx = pid_x.compute(x_error, dt)
+        desired_fy = pid_y.compute(y_error, dt)
+
+
+        # Guard against dividing by a tiny/zero thrust (shouldn't happen
+        # given min_thrust > 0, but thrust here is PRE-clamp - cheap
+        # safety net before the division below
+        safe_thrust = max(thrust, params.min_thrust)
+        alpha = desired_fx / safe_thrust
+        beta = desired_fy / safe_thrust
+
+        control = clamp_control(np.array([thrust, alpha, beta]), params)
+
+        next_state = rk4_step(current_state, control, params, dt)
+        times.append(times[-1] + dt)
+        states.append(next_state)
+
+        if next_state[2] <= 0.0:
+            break
+
+        if next_state[6] <= params.dry_mass:
+            break
+
+    return np.array(times), np.array(states)
