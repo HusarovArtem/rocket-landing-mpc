@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 30**
+**AKTUALNY KROK: 31**
 
 ## Faza A — Setup i porządki
 
@@ -156,10 +156,20 @@ w Fazie D/E)
 
 ## Faza D — Przejście na MPC (CasADi)
 
-- [ ] 30. Symboliczna wersja dynamiki w CasADi (osobna implementacja, nie import
-      z `dynamics.py`).
+- [x] 30. Symboliczna wersja dynamiki w CasADi (osobna implementacja, nie import
+      z `dynamics.py`) — `casadi_dynamics()` w nowym `controllers/mpc.py`,
+      przepisana niezależnie (`ca.sin`/`ca.cos`/`ca.vertcat` zamiast
+      `np.sin`/`np.cos`/`np.concatenate`), żeby model MPC i model symulatora
+      nie współdzieliły tego samego kodu (ważne pod kątem eksperymentu 45 —
+      niezgodność modelu). Zweryfikowane w konsoli przez `ca.Function`:
+      hover (thrust=mass*g, alpha=beta=0) → przyspieszenie [0,0,0],
+      mass_rate=-83.33 kg/s, zgodne z `dynamics()` do pełnej precyzji;
+      dwa dodatkowe przypadki z nachyloną tą samą formułą (różne
+      thrust/alpha/beta) — wyniki `casadi_dynamics` i `dynamics` identyczne
+      w każdym z nich ✓.
 - [ ] 31. Dyskretyzacja RK4 w CasADi (osobna implementacja integratora od tej w
       `integrators.py` — ważne, żeby uniknąć sztucznie idealnych wyników).
+      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
 - [ ] 32. Funkcja kosztu jako wyrażenia CasADi (błąd pozycji, prędkości,
       sterowania, Δu).
 - [ ] 33. Budowa NLP: zmienne decyzyjne (stan+sterowanie na horyzoncie),
