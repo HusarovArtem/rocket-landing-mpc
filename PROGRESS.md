@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 29**
+**AKTUALNY KROK: 30**
 
 ## Faza A — Setup i porządki
 
@@ -137,11 +137,22 @@ CasADi/IPOPT, struktura katalogów na miejscu.* ✅ ZALICZONY
       ≈30.58 m, touchdown_speed_mps ≈10.83 m/s (więcej niż |vz|=9.59,
       poprawnie liczy też vx/vy), fuel_used_kg ≈1772.47 kg, flight_time_s
       ≈17.85 s — wszystko zgodne z ręcznym oszacowaniem ✓.
-- [ ] 29. Wykres i ocena pierwszego pełnego lądowania z PID (3D + przebiegi
-      czasowe).
+- [x] 29. Wykres i ocena pierwszego pełnego lądowania z PID (3D + przebiegi
+      czasowe) — `plot_full_pid_landing()` w `scripts/plot_profile.py`,
+      ten sam scenariusz co kroki 27/28 (x=100, y=50, z=500, vz=-50).
+      Zweryfikowane wizualnie: wysokość gładko 500→0, x i y schodzą od
+      100/50, przecinają zero ok. t≈13.5 s i kontynuują w minus
+      (przeregulowanie widoczne na wykresie), vz rośnie z -50 do ok. -9.5;
+      na wykresie 3D trajektoria mija czarny krzyżyk (cel) i ląduje w
+      czerwonym punkcie za nim. Wydrukowany `landing_summary` idealnie
+      zgodny z krokiem 28 (flight_time_s=17.85, position_error_m=30.58,
+      touchdown_speed_mps=10.83, fuel_used_kg=1772.47) — potwierdza, że
+      wykres pokazuje ten sam, już zweryfikowany lot ✓.
 
 *Punkt kontrolny Fazy C: PID samodzielnie prowadzi rakietę do (niedoskonałego)
-lądowania od początku do końca.*
+lądowania od początku do końca.* ✅ ZALICZONY (przeregulowanie x/y i zbyt duże
+vz przy dotknięciu to znane ograniczenia tego baseline'u, do porównania z MPC
+w Fazie D/E)
 
 ## Faza D — Przejście na MPC (CasADi)
 
