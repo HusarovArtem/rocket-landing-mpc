@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 28**
+**AKTUALNY KROK: 29**
 
 ## Faza A — Setup i porządki
 
@@ -128,9 +128,15 @@ CasADi/IPOPT, struktura katalogów na miejscu.* ✅ ZALICZONY
       działa stabilnie na obu osiach, bez rozbiegania ✓. Dalsze dostrojenie
       (przeregulowanie x/y, zbyt duże vz przy dotknięciu) odłożone na
       kolejne kroki/fazy.
-- [ ] 28. Pierwsza wersja `metrics.py`: błąd lądowania, prędkość przyziemienia,
-      zużycie paliwa.
-      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
+- [x] 28. Pierwsza wersja `metrics.py`: błąd lądowania, prędkość przyziemienia,
+      zużycie paliwa. Trzy funkcje (`landing_position_error`,
+      `landing_speed`, `fuel_used`) + wrapper `landing_summary`. Po drodze
+      drobna poprawka transkrypcji: `fuel_used` zwracało `np.float64` bez
+      `float(...)` (niezgodne z pozostałymi funkcjami). Zweryfikowane na
+      scenariuszu z kroku 27 (x=100, y=50, z=500, vz=-50): position_error_m
+      ≈30.58 m, touchdown_speed_mps ≈10.83 m/s (więcej niż |vz|=9.59,
+      poprawnie liczy też vx/vy), fuel_used_kg ≈1772.47 kg, flight_time_s
+      ≈17.85 s — wszystko zgodne z ręcznym oszacowaniem ✓.
 - [ ] 29. Wykres i ocena pierwszego pełnego lądowania z PID (3D + przebiegi
       czasowe).
 

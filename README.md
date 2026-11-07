@@ -8,7 +8,7 @@
 
 ![status](https://img.shields.io/badge/status-in%20progress-yellow)
 ![phase](https://img.shields.io/badge/phase-C%20%7C%20PID%20baseline-blue)
-![progress](https://img.shields.io/badge/progress-27%2F57%20steps-orange)
+![progress](https://img.shields.io/badge/progress-28%2F57%20steps-orange)
 ![python](https://img.shields.io/badge/python-3.14-3776AB)
 ![solver](https://img.shields.io/badge/NLP-CasADi%20%2B%20IPOPT-informational)
 
@@ -36,12 +36,12 @@ It's deliberately **not** a 6-DoF, aerodynamically exact rocket simulator — se
 
 ## 📊 Progress
 
-**27 / 57 steps done — Phase C (PID baseline) in progress.**
+**28 / 57 steps done — Phase C (PID baseline) in progress.**
 
 ```
 Phase A  Setup & housekeeping        ████████████████████ 8/8   ✅
 Phase B  Physics & simulator         ████████████████████ 14/14 ✅
-Phase C  Baseline PID controller     ██████████████░░░░░░ 5/7   🔧 current
+Phase C  Baseline PID controller     ████████████████░░░░ 6/7   🔧 current
 Phase D  Transition to MPC (CasADi)  ░░░░░░░░░░░░░░░░░░░░ 0/10
 Phase E  Experiments & robustness    ░░░░░░░░░░░░░░░░░░░░ 0/11
 Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░░░░░░░ 0/7
@@ -84,15 +84,15 @@ Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░�
 </details>
 
 <details open>
-<summary><b>🔧 Phase C — Baseline PID controller</b> (5/7, current phase)</summary>
+<summary><b>🔧 Phase C — Baseline PID controller</b> (6/7, current phase)</summary>
 
 - [x] Landing target definition (`reference.py`): pad at origin, zero velocity
 - [x] Simple PID on vertical velocity (`controllers/pid.py`)
 - [x] Closed-loop PID test (vertical motion only): stable touchdown at -8.06 m/s, not yet soft but no divergence
 - [x] Extend PID to horizontal position (x, y): `pid_x`/`pid_y` on position error, steering thrust tilt angles
 - [x] Closed-loop simulation (`simulate_pid` in `simulation.py`): state → 3 PIDs → physics; stable on both axes (x/y overshoot, vz=-9.59 m/s at touchdown, not yet soft)
-- [ ] First landing metrics (`metrics.py`) ← **next step**
-- [ ] First full PID landing, plotted and evaluated
+- [x] First landing metrics (`metrics.py`): position error ≈30.6 m, touchdown speed ≈10.8 m/s, fuel used ≈1772 kg
+- [ ] First full PID landing, plotted and evaluated ← **next step**
 
 </details>
 

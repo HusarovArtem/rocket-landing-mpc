@@ -3,6 +3,8 @@ import numpy as np
 from rocket_landing.params import VehicleParams
 from rocket_landing.controllers.pid import PIDController
 from rocket_landing.simulation import simulate_pid
+from rocket_landing.metrics import landing_summary
+from rocket_landing.reference import LandingTarget
 
 p = VehicleParams()
 
@@ -17,9 +19,6 @@ state0 = np.array([100.0, 50.0, 500.0, 0.0, 0.0, -50.0, p.initial_mass])
 
 times, states = simulate_pid(state0, pid_vz, pid_x, pid_y, p, dt=0.05)
 
-print("launched after: ", times[-1], "s")
-print("touchdown x: ", states[-1][0])
-print("touchdown y: ", states[-1][1])
-print("touchdown height: ", states[-1][2])
-print("touchdown vz: ", states[-1][5])
-print("touchdown mass: ", states[-1][6])
+target = LandingTarget()
+summary = landing_summary(times, states, target, p.initial_mass)
+print(summary)
