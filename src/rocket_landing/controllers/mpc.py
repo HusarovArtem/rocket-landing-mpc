@@ -50,3 +50,28 @@ def casadi_dynamics(state, control, params):
     # ca.vertcat is CasADi's version of np.concatenate: it stacks scalar
     # expressions into ONE column vector, in the order given here
     return ca.vertcat(vx, vy,vz, ax, ay, az, mass_rate)
+
+def casadi_rk4_step(state, control, params, dt):
+    """
+    Symbolic version of rk4_step() from integrators.py. Advances `state`
+    forward by one step `dt`, using the SAME classic RK4 formula (4
+    derivative samples, combined with wights 1/2/2/1 over 6) - but
+    written with CasADi expression (casadi_dynamics instead of
+    dynamics) so it can live inside a symbolic optimization problem.
+    """
+    # k1: derivative at the start of the step - identical idea to
+    # rk4_step(), just calling casadi_dynamics instead of dynamics
+    k1 = casadi_dynamics(state, control, params)
+
+    # k2: derivative at a trial half-step forward using k1
+    k2 = casadi_dynamics(state + dt / 2 * k1, control, params)
+
+    # k3: derivative at another trial half-step, this time using k2
+    k3 = casadi_dynamics(state + dt / 2 * k2, control, params)
+
+     # k4: derivative at a trialfull step forward using k3
+    k4 = casadi_dynamics(state + dt * k3, control, params)
+
+    # combine the four slope estimates with the classic RK4 weights
+    return state + dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+

@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 31**
+**AKTUALNY KROK: 32**
 
 ## Faza A — Setup i porządki
 
@@ -167,11 +167,15 @@ w Fazie D/E)
       dwa dodatkowe przypadki z nachyloną tą samą formułą (różne
       thrust/alpha/beta) — wyniki `casadi_dynamics` i `dynamics` identyczne
       w każdym z nich ✓.
-- [ ] 31. Dyskretyzacja RK4 w CasADi (osobna implementacja integratora od tej w
-      `integrators.py` — ważne, żeby uniknąć sztucznie idealnych wyników).
-      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
+- [x] 31. Dyskretyzacja RK4 w CasADi (`casadi_rk4_step()` w `controllers/mpc.py`,
+      osobna implementacja integratora od `rk4_step()` w `integrators.py`,
+      wywołuje `casadi_dynamics` niezależnie od `rk4_step`). Zweryfikowane
+      przez `ca.Function`: hover (dt=0.1) i naklon thrust (dt=0.5) —
+      wyniki `casadi_rk4_step` i `rk4_step` identyczne do pełnej precyzji
+      floatów w obu przypadkach ✓.
 - [ ] 32. Funkcja kosztu jako wyrażenia CasADi (błąd pozycji, prędkości,
       sterowania, Δu).
+      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
 - [ ] 33. Budowa NLP: zmienne decyzyjne (stan+sterowanie na horyzoncie),
       ograniczenia dynamiki.
 - [ ] 34. Ograniczenia: ciąg min/max, kąt odchylenia, wysokość ≥ 0, masa ≥ masa

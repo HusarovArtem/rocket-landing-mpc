@@ -8,7 +8,7 @@
 
 ![status](https://img.shields.io/badge/status-in%20progress-yellow)
 ![phase](https://img.shields.io/badge/phase-D%20%7C%20MPC%20transition-blue)
-![progress](https://img.shields.io/badge/progress-30%2F57%20steps-orange)
+![progress](https://img.shields.io/badge/progress-31%2F57%20steps-orange)
 ![python](https://img.shields.io/badge/python-3.14-3776AB)
 ![solver](https://img.shields.io/badge/NLP-CasADi%20%2B%20IPOPT-informational)
 
@@ -36,13 +36,13 @@ It's deliberately **not** a 6-DoF, aerodynamically exact rocket simulator — se
 
 ## 📊 Progress
 
-**30 / 57 steps done — Phase D (MPC transition) in progress.**
+**31 / 57 steps done — Phase D (MPC transition) in progress.**
 
 ```
 Phase A  Setup & housekeeping        ████████████████████ 8/8   ✅
 Phase B  Physics & simulator         ████████████████████ 14/14 ✅
 Phase C  Baseline PID controller     ████████████████████ 7/7   ✅
-Phase D  Transition to MPC (CasADi)  ██░░░░░░░░░░░░░░░░░░ 1/10  🔧 current
+Phase D  Transition to MPC (CasADi)  ████░░░░░░░░░░░░░░░░ 2/10  🔧 current
 Phase E  Experiments & robustness    ░░░░░░░░░░░░░░░░░░░░ 0/11
 Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░░░░░░░ 0/7
 ```
@@ -97,11 +97,11 @@ Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░�
 </details>
 
 <details open>
-<summary><b>🔧 Phase D — Transition to MPC (CasADi)</b> (1/10, current phase)</summary>
+<summary><b>🔧 Phase D — Transition to MPC (CasADi)</b> (2/10, current phase)</summary>
 
 - [x] Symbolic dynamics in CasADi (`casadi_dynamics()` in `controllers/mpc.py`): independent rewrite, numerically matches `dynamics.py` exactly on hover + tilted test cases
-- [ ] CasADi RK4 discretization (independent of the simulator's integrator) ← **next step**
-- [ ] Cost function as CasADi expressions
+- [x] CasADi RK4 discretization (`casadi_rk4_step()`, independent of the simulator's integrator): matches `rk4_step()` exactly on hover + tilted test cases, different `dt` values
+- [ ] Cost function as CasADi expressions ← **next step**
 - [ ] NLP construction: decision variables + dynamics constraints
 - [ ] State & actuator constraints
 - [ ] Single open-loop NLP solve (trajectory preview)
