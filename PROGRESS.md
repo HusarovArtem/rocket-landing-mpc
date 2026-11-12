@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 34**
+**AKTUALNY KROK: 35**
 
 ## Faza A — Setup i porządki
 
@@ -185,11 +185,17 @@ w Fazie D/E)
       przypiętymi zmiennymi (start + stałe sterowanie "hover") rozwiązane przez
       IPOPT, trajektoria identyczna z ręcznym łańcuchem `casadi_rk4_step` —
       max różnica 0.0 ✓.
-- [ ] 34. Ograniczenia: ciąg min/max, kąt odchylenia, wysokość ≥ 0, masa ≥ masa
-      własna.
-      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
+- [x] 34. Ograniczenia: ciąg min/max, kąt odchylenia, wysokość ≥ 0, masa ≥ masa
+      własna: `add_state_and_actuator_constraints()` w `controllers/mpc.py`
+      (`opti.bounded(...)` na U, `X[2,:] >= 0`, `X[6,:] >= dry_mass`).
+      Zweryfikowane (`scripts/steps/check_step34.py`, 4 testy): wymuszone
+      maksymalizowanie ciągu/alpha zatrzymuje się dokładnie na limicie
+      (400000 N, 0.349066 rad); scenariusze wymuszające przejście przez
+      ziemię i spalenie paliwa poniżej masy własnej poprawnie zgłaszane
+      przez IPOPT jako INFEASIBLE ✓.
 - [ ] 35. Rozwiązanie jednego NLP w pętli otwartej (bez MPC jeszcze) — podgląd
       trajektorii.
+      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
 - [ ] 36. Pętla MPC z przesuwanym horyzontem: w każdym kroku rozwiąż NLP od
       aktualnego stanu, zastosuj pierwsze sterowanie, zasymuluj krok, powtórz.
 - [ ] 37. Ciepły start (warm-start) z poprzedniego rozwiązania.

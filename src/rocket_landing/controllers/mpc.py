@@ -206,3 +206,25 @@ def build_mpc_nlp(params, N, dt):
         opti.subject_to(X[:, k+1] == x_next_predicted)
 
     return opti, X, U
+
+
+def add_state_and_actuator_constraints(opti, X, U, params):
+    """
+    Adds the SAME physical limits already used by clamp_control() for the
+    simulator - but here they go directly INTO the optimizer as hard
+    constraints it must respect WHILE searching for a solution, instead of
+    clipping an already chosen control AFTER the fact.
+    """
+    thrust = U[0, :]
+    alpha = U[1, :]
+    beta = U[2, :]
+
+    opti.subject_to(opti.bounded(params.min_thrust, thrust, params.max_thrust))
+    opti.subject_to(opti.bounded(-params.max_tilt_angle, alpha, params.max_tilt_angle))
+    opti.subject_to(opti.bounded(-params.max_tilt_angle, beta, params.max_tilt_angle))
+
+    height = X[2, :]
+    mass = X[6, :]
+
+    opti.subject_to(height >= 0)
+    opti.subject_to(mass >= params.dry_mass)
