@@ -1,7 +1,5 @@
 import casadi as ca
-import numpy as np
 
-from rocket_landing.params import VehicleParams
 
 def casadi_dynamics(state, control, params):
     """
@@ -165,3 +163,46 @@ def terminal_cost(state, initial_mass, target, weights):
     fuel_cost = weights.w_m * (initial_mass - mass)
 
     return position_cost + velocity_cost + fuel_cost
+
+def build_mpc_nlp(params, N, dt):
+    """
+    Builds the SKELETON of the MPC optimization problem (NLP):
+    the decision variables (predicted state and control trajectories over
+    the horizon) and the dynamics constraints that tie them together.
+
+    Nothing else yet - no cost function, no actuator/state bounds, no
+    initial-condition constraint. Those come in later steps (34: bounds,
+    35: cost + initital condition + solve). THis step only answers:
+    "what are we optimizing OVER, and what makes a candidate trajectory
+    physically possible in the first place?"
+
+    N - number of control steps in the horizon (prediction horizon
+    length, e.g. 30)
+    dt - duration of one step in seconds (same model used inside
+    casadi_rk4_step
+
+    Returns (opti, X, U) so later steps can add bounds,
+    the intial-state constaint, and the cost function on top f the SAME
+    problem - opti.subject_to()/opti.minimie() can be called again from
+    outside the function.
+    """
+    opti = ca.Opti()
+
+    # State trajectory: one state column (length 7) per horizon point -
+    # N+1 pints total, k=0 ("now") through k=N (end of horizon).
+    X = opti.variable(7, N + 1)
+
+    # Control trajectory: one state column (length 3) per horizon
+    # STEP N columns total , k = 0 through k=N-1. There is no control
+    # decision "after" the last state, same reasoning, as terminal_cost
+    U = opti.variable(3, N)
+
+    # Dynamics constraint: force every consecutive pair of steps to be
+    # consistent with the discretized physics (casadi_rk4_step) under
+    # the chosen control at that step. This is what turns "N+1 arbitrary
+    # state columns into "one physically-possible predicted trajectory".
+    for k in range(N):
+        x_next_predicted = casadi_rk4_step(X[:, k], U[:, k], params, dt)
+        opti.subject_to(X[:, k+1] == x_next_predicted)
+
+    return opti, X, U

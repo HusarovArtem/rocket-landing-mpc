@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 33**
+**AKTUALNY KROK: 34**
 
 ## Faza A — Setup i porządki
 
@@ -178,11 +178,16 @@ w Fazie D/E)
       Zweryfikowane ręcznym przeliczeniem (`scripts/steps/check_step32.py`):
       `stage_cost` ≈ 50230.25, `terminal_cost` = 61.8 — zgodne do pełnej
       precyzji floatów ✓.
-- [ ] 33. Budowa NLP: zmienne decyzyjne (stan+sterowanie na horyzoncie),
-      ograniczenia dynamiki.
-      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
+- [x] 33. Budowa NLP: zmienne decyzyjne (stan+sterowanie na horyzoncie),
+      ograniczenia dynamiki: `build_mpc_nlp()` w `controllers/mpc.py` (CasADi
+      `Opti`, `X` 7×(N+1), `U` 3×N, ograniczenia `X[:,k+1] == casadi_rk4_step(...)`).
+      Zweryfikowane (`scripts/steps/check_step33.py`): zadanie z w pełni
+      przypiętymi zmiennymi (start + stałe sterowanie "hover") rozwiązane przez
+      IPOPT, trajektoria identyczna z ręcznym łańcuchem `casadi_rk4_step` —
+      max różnica 0.0 ✓.
 - [ ] 34. Ograniczenia: ciąg min/max, kąt odchylenia, wysokość ≥ 0, masa ≥ masa
       własna.
+      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
 - [ ] 35. Rozwiązanie jednego NLP w pętli otwartej (bez MPC jeszcze) — podgląd
       trajektorii.
 - [ ] 36. Pętla MPC z przesuwanym horyzontem: w każdym kroku rozwiąż NLP od
