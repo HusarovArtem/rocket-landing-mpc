@@ -234,7 +234,7 @@ def add_state_and_actuator_constraints(opti, X, U, params):
     opti.subject_to(mass >= params.dry_mass)
 
 
-def solve_open_loop_trajectory(params, weights, target, x0, N, dt, u_prev=None):
+def solve_open_loop_trajectory(params, weights, target, x0, N, dt, u_prev=None, X_guess=None, U_guess=None):
     """
     Builds and solves ONE full MPC optimization problem, from a single
     starting state x0, over a fixed horizon of N steps - NOT the
@@ -259,6 +259,15 @@ def solve_open_loop_trajectory(params, weights, target, x0, N, dt, u_prev=None):
     this gets called repeatedly inside a closed loop - step 36). If u_prex is None
     (a one-off, standalone comparing its control against itself, same as before
     giving a harmless zero, detat_u at k=0
+
+
+    *** Adding two new optional params X_guess and U_guess  (step 37)
+
+    This is what makes warm-starting possible: a solve from on real step
+    can hand its OWN solution forward as the starting guess for the NEXT real
+    steps. Since consecutive solves along a receding horizon are very similar
+    to each other (same physics, nearly the same starting state), this gives
+    IPOPT a near-connect answer to start from, instead of guessing from scratch every single time.
     """
 
     opti, X, U = build_mpc_nlp(params, N, dt)
@@ -284,22 +293,22 @@ def solve_open_loop_trajectory(params, weights, target, x0, N, dt, u_prev=None):
 
     opti.minimize(cost)
 
-    # Initial guess: hold x0 constant across the whole horizon, and
-    # guess a "hover" control (thrust balances gravity at the INITIAL
-    # mass) - same safe, nonzero starting point used in the step 33/34
-    # checks, just reused here as a generic default rather than a one-off
-    # test value.
-    opti.set_initial(X, np.tile(x0.reshape(-1,1), (1, N+1)))
-    hover_u = np.array([params.initial_mass * params.g, 0.0, 0.0])
-    opti.set_initial(U, np.tile(hover_u.reshape(-1, 1), (1, N)))
+    if X_guess is None:
+        X_guess = np.tile(np.array(x0).reshape(-1, 1), (1, N+1))
+    if U_guess is None:
+        hover_u = np.array([params.initial_mass * params.g, 0.0,0.0])
+        U_guess = np.tile(hover_u.reshape(-1,1), (1,N))
+
+    opti.set_initial(X, X_guess)
+    opti.set_initial(U, U_guess)
 
     opti.solver("ipopt", {"print_time": False}, {"print_level": 0})
     sol = opti.solve()
 
-    return sol.value(X), sol.value(U)
+    return sol.value(X), sol.value(U), sol.stats()["iter_count"]
 
 
-def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000):
+def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000, warm_start= True):
     """
     The receding-horizon MPC loop (step 36): at EVERY real time step,
     solve a FRESH NLP from the rocket's current REAL state, apply ONLY
@@ -319,6 +328,10 @@ def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000):
     the NLP's own bounds should already guarantee U[:, 0] respects the
     limits, clamping just protects against solver tolerance slack.
 
+    When warm_start = True (the new default - step 37), each real step's
+    solve hans its OWN solution forward - SHIFTED by one step - as the starting
+    guess for the NEXT real step's above.
+
     Returns:
         times       - 1D array, one timestamp per REAL step (like simulate_pid)
         states      - 2D array, one row per REAL state
@@ -328,15 +341,20 @@ def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000):
     times = [0.0]
     states = [np.array(state0, dtype=float)]
     controls = []
+    iter_counts=[]
 
     u_prev = None # no REAL prev control exists yet at the first step
+    X_guess = None
+    U_guess = None
 
     for i in range(max_steps):
         current_state = states[-1] # last element (current)
-        X_opt, U_opt = solve_open_loop_trajectory(
-            params, weights, target, current_state, N, dt, u_prev=u_prev
-        )
 
+        X_opt, U_opt, iters = solve_open_loop_trajectory(
+            params, weights, target, current_state, N, dt,
+            u_prev=u_prev, X_guess=X_guess, U_guess=U_guess
+        )
+        iter_counts.append(iters)
         control = clamp_control(U_opt[:, 0], params)
 
         next_state = rk4_step(current_state, control, params, dt)
@@ -344,11 +362,18 @@ def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000):
         states.append(next_state)
         controls.append(control)
 
-        u_prex = control
+        u_prev = control
+
+        if warm_start:
+            X_guess = np.hstack([X_opt[:, 1:], X_opt[:, -1:]])
+            U_guess = np.hstack([U_opt[:, 1:], U_opt[:, -1:]])
+        else:
+            X_guess = None
+            U_guess = None
 
         if next_state[2] <= 0.0: # z <= 0.0
             break
         if next_state[6] <= params.dry_mass: # mass <= dry mass
             break
 
-    return np.array(times), np.array(states), np.array(controls)
+    return np.array(times), np.array(states), np.array(controls), iter_counts

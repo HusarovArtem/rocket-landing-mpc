@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 37**
+**AKTUALNY KROK: 38**
 
 ## Faza A — Setup i porządki
 
@@ -215,9 +215,18 @@ w Fazie D/E)
       5 kroków rzeczywistych): wektor sterowania zmienia się między krokami
       (plan jest faktycznie liczony od nowa, nie cache'owany) ✓. Bez
       ciepłego startu (krok 37) — ~0,2 s/krok, pełny lot odłożony do kroku 39.
-- [ ] 37. Ciepły start (warm-start) z poprzedniego rozwiązania.
-      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
+- [x] 37. Ciepły start (warm-start) z poprzedniego rozwiązania: `simulate_mpc()`
+      przekazuje własne rozwiązanie (`X_opt`, `U_opt`), PRZESUNIĘTE o jeden
+      krok (`np.hstack([X_opt[:,1:], X_opt[:,-1:]])`), jako punkt startowy
+      (`opti.set_initial`) dla kolejnego rozwiązania. Zweryfikowane
+      (`scripts/steps/check_step37.py`, 8 kroków, ten sam scenariusz):
+      liczba iteracji IPOPT identyczna na kroku 0 (192 vs 192 — brak
+      wcześniejszego rozwiązania w obu przypadkach), a od kroku 1 drastycznie
+      mniejsza z ciepłym startem (suma 92 vs 349 iteracji na krokach 1-7);
+      końcowe stany niemal identyczne (różnica ≈0.39, w granicach różnych
+      lokalnych optimów zadania nieliniowego) ✓.
 - [ ] 38. Obsługa niepowodzenia solvera (logowanie, fallback).
+      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
 - [ ] 39. Pierwsze pełne nominalne lądowanie z MPC + wykresy.
 
 *Punkt kontrolny Fazy D: MPC samodzielnie prowadzi rakietę do lądowania w

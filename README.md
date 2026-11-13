@@ -8,7 +8,7 @@
 
 ![status](https://img.shields.io/badge/status-in%20progress-yellow)
 ![phase](https://img.shields.io/badge/phase-D%20%7C%20MPC%20transition-blue)
-![progress](https://img.shields.io/badge/progress-36%2F57%20steps-orange)
+![progress](https://img.shields.io/badge/progress-37%2F57%20steps-orange)
 ![python](https://img.shields.io/badge/python-3.14-3776AB)
 ![solver](https://img.shields.io/badge/NLP-CasADi%20%2B%20IPOPT-informational)
 
@@ -36,13 +36,13 @@ It's deliberately **not** a 6-DoF, aerodynamically exact rocket simulator — se
 
 ## 📊 Progress
 
-**36 / 57 steps done — Phase D (MPC transition) in progress.**
+**37 / 57 steps done — Phase D (MPC transition) in progress.**
 
 ```
 Phase A  Setup & housekeeping        ████████████████████ 8/8   ✅
 Phase B  Physics & simulator         ████████████████████ 14/14 ✅
 Phase C  Baseline PID controller     ████████████████████ 7/7   ✅
-Phase D  Transition to MPC (CasADi)  ██████████████░░░░░░ 7/10  🔧 current
+Phase D  Transition to MPC (CasADi)  ████████████████░░░░ 8/10  🔧 current
 Phase E  Experiments & robustness    ░░░░░░░░░░░░░░░░░░░░ 0/11
 Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░░░░░░░ 0/7
 ```
@@ -97,7 +97,7 @@ Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░�
 </details>
 
 <details open>
-<summary><b>🔧 Phase D — Transition to MPC (CasADi)</b> (7/10, current phase)</summary>
+<summary><b>🔧 Phase D — Transition to MPC (CasADi)</b> (8/10, current phase)</summary>
 
 - [x] Symbolic dynamics in CasADi (`casadi_dynamics()` in `controllers/mpc.py`): independent rewrite, numerically matches `dynamics.py` exactly on hover + tilted test cases
 - [x] CasADi RK4 discretization (`casadi_rk4_step()`, independent of the simulator's integrator): matches `rk4_step()` exactly on hover + tilted test cases, different `dt` values
@@ -106,7 +106,8 @@ Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░�
 - [x] State & actuator constraints (`add_state_and_actuator_constraints()` in `controllers/mpc.py`): thrust/tilt bounds correctly pin to their limits under a maximizing objective; forced through-the-ground and over-burn scenarios correctly reported INFEASIBLE by IPOPT
 - [x] Single open-loop NLP solve / trajectory preview (`solve_open_loop_trajectory()` in `controllers/mpc.py`): wires cost + constraints + initial condition together, IPOPT finds an optimal, fully constraint-respecting solution; revealed that today's placeholder weights don't yet produce braking behavior (expected — see [`rozdzial_06_mpc.md`](thesis/rozdzial_06_mpc.md) §6.4, real tuning is step 47)
 - [x] Receding-horizon MPC loop (`simulate_mpc()` in `controllers/mpc.py`): re-solves the NLP from the real current state every step, applies only `U_opt[:, 0]` via the simulator's own `rk4_step()`/`clamp_control()` (independent of the controller's internal CasADi model); verified over 5 real steps that the applied control genuinely changes step to step (plan is recomputed, not cached)
-- [ ] Warm-start from the previous solution ← **next step**
+- [x] Warm-start from the previous solution (`simulate_mpc()` feeds its own shifted solution forward as the next solve's initial guess): verified over 8 real steps — identical iteration count on step 0 (no prior solution either way), drastically fewer IPOPT iterations from step 1 onward (92 vs 349 total), nearly identical final states
+- [ ] Solver-failure handling ← **next step**
 - [ ] Receding-horizon MPC loop
 - [ ] Warm-start from the previous solution
 - [ ] Solver-failure handling
