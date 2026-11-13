@@ -1,5 +1,5 @@
 import casadi as ca
-
+import numpy as np
 
 def casadi_dynamics(state, control, params):
     """
@@ -228,3 +228,55 @@ def add_state_and_actuator_constraints(opti, X, U, params):
 
     opti.subject_to(height >= 0)
     opti.subject_to(mass >= params.dry_mass)
+
+
+def solve_open_loop_trajectory(params, weights, target, x0, N, dt):
+    """
+    Builds and solves ONE full MPC optimization problem, from a single
+    starting state x0, over a fixed horizon of N steps - NOT the
+    receding-horizon MPC loop yet (that's step 36). This is just a
+    "preview": what trajectory would the optimizer plan RIGHT NOW,
+    before any close-loop correction ever happens ?
+
+    This wires together every piece from steps 32-34:
+        - build_mpc_nlp(): the decision variables + dynamics constraints
+        - add_state_and_actuator_constraints(): the physical bounds
+        - stage_cost() / terminal_cost(): what "good" means
+    plus the ONE thing build_mpc_nlp() deliberately left out: pinning
+    the very first state to a concrete starting point.
+
+    Returns (X_opt, U_opt) as plain numpy arrays (7 x (N+1) and 3 x N)
+    so the result can be printed/plotted directly.
+    """
+
+    opti, X, U = build_mpc_nlp(params, N, dt)
+    add_state_and_actuator_constraints(opti, X, U, params)
+
+    # The initial-state constraint: "The predicted trajectory must start
+    # from where the rocket ACTUALLY is right now" - without this, X[:, 0]
+    # would be free to be anything the optimizer likes
+    opti.subject_to(X[:,0] == x0)
+
+    initial_mass = x0[6]
+
+    cost = 0
+    for k in range(N):
+        control_prev = U[:, k-1] if k > 0 else U[:, 0]
+        cost = cost + stage_cost(X[:, k], U[:, k], control_prev, target, weights)
+    cost = cost + terminal_cost(X[:, N], initial_mass, target, weights)
+
+    opti.minimize(cost)
+
+    # Initial guess: hold x0 constant across the whole horizon, and
+    # guess a "hover" control (thrust balances gravity at the INITIAL
+    # mass) - same safe, nonzero starting point used in the step 33/34
+    # checks, just reused here as a generic default rather than a one-off
+    # test value.
+    opti.set_initial(X, np.tile(x0.reshape(-1,1), (1, N+1)))
+    hover_u = np.array([params.initial_mass * params.g, 0.0, 0.0])
+    opti.set_initial(U, np.tile(hover_u.reshape(-1, 1), (1, N)))
+
+    opti.solver("ipopt")
+    sol = opti.solve()
+
+    return sol.value(X), sol.value(U)

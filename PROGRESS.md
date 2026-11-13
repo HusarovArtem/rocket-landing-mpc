@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 35**
+**AKTUALNY KROK: 36**
 
 ## Faza A — Setup i porządki
 
@@ -193,11 +193,22 @@ w Fazie D/E)
       (400000 N, 0.349066 rad); scenariusze wymuszające przejście przez
       ziemię i spalenie paliwa poniżej masy własnej poprawnie zgłaszane
       przez IPOPT jako INFEASIBLE ✓.
-- [ ] 35. Rozwiązanie jednego NLP w pętli otwartej (bez MPC jeszcze) — podgląd
-      trajektorii.
-      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
+- [x] 35. Rozwiązanie jednego NLP w pętli otwartej (bez MPC jeszcze) — podgląd
+      trajektorii: `solve_open_loop_trajectory()` w `controllers/mpc.py`,
+      łączy `build_mpc_nlp` + `add_state_and_actuator_constraints` +
+      `stage_cost`/`terminal_cost` + brakujący warunek początkowy `X[:,0]==x0`.
+      Zweryfikowane (`scripts/steps/check_step35.py`, scenariusz x=100,y=50,
+      z=500,vz=-50, N=30, dt=0.1): IPOPT znajduje rozwiązanie optymalne,
+      wszystkie ograniczenia (ciąg, kąty, wysokość, masa) respektowane ✓.
+      Ważna obserwacja (opisana też w `thesis/rozdzial_06_mpc.md`, p. 6.4):
+      przy domyślnych, nieskalibrowanych wagach (`Qr=Qv=1`) regulator NIE
+      hamuje (`vz` -50→-63 m/s) — kwadrat błędu pozycji (dziesiątki tysięcy)
+      dominuje nad kwadratem błędu prędkości (tysiące), więc funkcja kosztu
+      nagradza szybsze opadanie. Nie jest to błąd implementacji — to dowód
+      na potrzebę kalibracji wag w kroku 47.
 - [ ] 36. Pętla MPC z przesuwanym horyzontem: w każdym kroku rozwiąż NLP od
       aktualnego stanu, zastosuj pierwsze sterowanie, zasymuluj krok, powtórz.
+      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
 - [ ] 37. Ciepły start (warm-start) z poprzedniego rozwiązania.
 - [ ] 38. Obsługa niepowodzenia solvera (logowanie, fallback).
 - [ ] 39. Pierwsze pełne nominalne lądowanie z MPC + wykresy.
