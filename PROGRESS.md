@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 36**
+**AKTUALNY KROK: 37**
 
 ## Faza A — Setup i porządki
 
@@ -206,10 +206,17 @@ w Fazie D/E)
       dominuje nad kwadratem błędu prędkości (tysiące), więc funkcja kosztu
       nagradza szybsze opadanie. Nie jest to błąd implementacji — to dowód
       na potrzebę kalibracji wag w kroku 47.
-- [ ] 36. Pętla MPC z przesuwanym horyzontem: w każdym kroku rozwiąż NLP od
-      aktualnego stanu, zastosuj pierwsze sterowanie, zasymuluj krok, powtórz.
-      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
+- [x] 36. Pętla MPC z przesuwanym horyzontem: w każdym kroku rozwiąż NLP od
+      aktualnego stanu, zastosuj pierwsze sterowanie, zasymuluj krok, powtórz:
+      `simulate_mpc()` w `controllers/mpc.py`, wywołuje (zaktualizowane)
+      `solve_open_loop_trajectory()` co krok, stosuje tylko `U_opt[:,0]`
+      przez `rk4_step()`/`clamp_control()` (niezależne od `casadi_rk4_step`,
+      p. rozdział 3.5). Zweryfikowane (`scripts/steps/check_step36.py`,
+      5 kroków rzeczywistych): wektor sterowania zmienia się między krokami
+      (plan jest faktycznie liczony od nowa, nie cache'owany) ✓. Bez
+      ciepłego startu (krok 37) — ~0,2 s/krok, pełny lot odłożony do kroku 39.
 - [ ] 37. Ciepły start (warm-start) z poprzedniego rozwiązania.
+      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
 - [ ] 38. Obsługa niepowodzenia solvera (logowanie, fallback).
 - [ ] 39. Pierwsze pełne nominalne lądowanie z MPC + wykresy.
 

@@ -1,6 +1,10 @@
 import casadi as ca
 import numpy as np
 
+from rocket_landing.actuators import clamp_control
+from rocket_landing.integrators import rk4_step
+
+
 def casadi_dynamics(state, control, params):
     """
     Symbolic version of dynamics() from dynamics.py. Returns the
@@ -230,7 +234,7 @@ def add_state_and_actuator_constraints(opti, X, U, params):
     opti.subject_to(mass >= params.dry_mass)
 
 
-def solve_open_loop_trajectory(params, weights, target, x0, N, dt):
+def solve_open_loop_trajectory(params, weights, target, x0, N, dt, u_prev=None):
     """
     Builds and solves ONE full MPC optimization problem, from a single
     starting state x0, over a fixed horizon of N steps - NOT the
@@ -247,6 +251,14 @@ def solve_open_loop_trajectory(params, weights, target, x0, N, dt):
 
     Returns (X_opt, U_opt) as plain numpy arrays (7 x (N+1) and 3 x N)
     so the result can be printed/plotted directly.
+
+    *** Adding new optionall argument: u_prev as for step 36
+
+    u_prev is the control that was Actuallt applied to the rocket just before
+    this solve (needed so the delta_u penalty at k=0 compares against real, once
+    this gets called repeatedly inside a closed loop - step 36). If u_prex is None
+    (a one-off, standalone comparing its control against itself, same as before
+    giving a harmless zero, detat_u at k=0
     """
 
     opti, X, U = build_mpc_nlp(params, N, dt)
@@ -261,7 +273,12 @@ def solve_open_loop_trajectory(params, weights, target, x0, N, dt):
 
     cost = 0
     for k in range(N):
-        control_prev = U[:, k-1] if k > 0 else U[:, 0]
+        if k > 0:
+            control_prev = U[:, k-1]
+        elif u_prev is not None:
+            control_prev = u_prev
+        else:
+            control_prev = U[:, 0]
         cost = cost + stage_cost(X[:, k], U[:, k], control_prev, target, weights)
     cost = cost + terminal_cost(X[:, N], initial_mass, target, weights)
 
@@ -276,7 +293,62 @@ def solve_open_loop_trajectory(params, weights, target, x0, N, dt):
     hover_u = np.array([params.initial_mass * params.g, 0.0, 0.0])
     opti.set_initial(U, np.tile(hover_u.reshape(-1, 1), (1, N)))
 
-    opti.solver("ipopt")
+    opti.solver("ipopt", {"print_time": False}, {"print_level": 0})
     sol = opti.solve()
 
     return sol.value(X), sol.value(U)
+
+
+def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000):
+    """
+    The receding-horizon MPC loop (step 36): at EVERY real time step,
+    solve a FRESH NLP from the rocket's current REAL state, apply ONLY
+    the first control U[:, 0] from that plan to the real rocket, advance
+    one real step, then THROW AWAY the rest of the plan and repeat from
+    the new state. This is the mechanizm discussed as "receding
+    horizon"- the planning window always starts at "now and slides
+    forward with time, instead of being computed once and blindly  followed
+
+    The REAL rocket is advanced with rk4_step() (integrators.py) and
+    clamp_control() (actuators.py) - the SAME, independent, non-CasADi
+    functions already ised by simulate_pid() - deliberately NOT
+    casadi_rk4_step(). This keeps "what the MPC predicts" and "wha
+    actually happends to the rocket" as separate implementations
+    (same reasoning as step 30 - needed later for the model-mismatch
+    experiment, step 45). clamp_control() is a cheap safety net here:
+    the NLP's own bounds should already guarantee U[:, 0] respects the
+    limits, clamping just protects against solver tolerance slack.
+
+    Returns:
+        times       - 1D array, one timestamp per REAL step (like simulate_pid)
+        states      - 2D array, one row per REAL state
+        controls    - 2D array, one row per control ACTUALLY applied
+                    (only ever U[:, 0] of each solve - never the rest o the plan)
+    """
+    times = [0.0]
+    states = [np.array(state0, dtype=float)]
+    controls = []
+
+    u_prev = None # no REAL prev control exists yet at the first step
+
+    for i in range(max_steps):
+        current_state = states[-1] # last element (current)
+        X_opt, U_opt = solve_open_loop_trajectory(
+            params, weights, target, current_state, N, dt, u_prev=u_prev
+        )
+
+        control = clamp_control(U_opt[:, 0], params)
+
+        next_state = rk4_step(current_state, control, params, dt)
+        times.append(times[-1] + dt)
+        states.append(next_state)
+        controls.append(control)
+
+        u_prex = control
+
+        if next_state[2] <= 0.0: # z <= 0.0
+            break
+        if next_state[6] <= params.dry_mass: # mass <= dry mass
+            break
+
+    return np.array(times), np.array(states), np.array(controls)
