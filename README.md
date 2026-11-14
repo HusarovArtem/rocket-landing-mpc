@@ -8,7 +8,7 @@
 
 ![status](https://img.shields.io/badge/status-in%20progress-yellow)
 ![phase](https://img.shields.io/badge/phase-D%20%7C%20MPC%20transition-blue)
-![progress](https://img.shields.io/badge/progress-39%2F57%20steps-orange)
+![progress](https://img.shields.io/badge/progress-40%2F57%20steps-orange)
 ![python](https://img.shields.io/badge/python-3.14-3776AB)
 ![solver](https://img.shields.io/badge/NLP-CasADi%20%2B%20IPOPT-informational)
 
@@ -36,14 +36,14 @@ It's deliberately **not** a 6-DoF, aerodynamically exact rocket simulator — se
 
 ## 📊 Progress
 
-**39 / 57 steps done — Phase D (MPC transition) complete, Phase E starting.**
+**40 / 57 steps done — Phase D (MPC transition) complete, Phase E in progress.**
 
 ```
 Phase A  Setup & housekeeping        ████████████████████ 8/8   ✅
 Phase B  Physics & simulator         ████████████████████ 14/14 ✅
 Phase C  Baseline PID controller     ████████████████████ 7/7   ✅
 Phase D  Transition to MPC (CasADi)  ████████████████████ 10/10 ✅
-Phase E  Experiments & robustness    ░░░░░░░░░░░░░░░░░░░░ 0/11  🔧 current
+Phase E  Experiments & robustness    █░░░░░░░░░░░░░░░░░░░ 1/11  🔧 current
 Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░░░░░░░ 0/7
 ```
 
@@ -113,10 +113,10 @@ Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░�
 </details>
 
 <details open>
-<summary><b>🔧 Phase E — Experiments and robustness</b> (0/11, current phase)</summary>
+<summary><b>🔧 Phase E — Experiments and robustness</b> (1/11, current phase)</summary>
 
-- [ ] Standardized scenarios & metrics for PID and MPC ← **next step**
-- [ ] Migrate parameters to `configs/*.yaml`
+- [x] Standardized scenarios & metrics for PID and MPC (`experiments/runners.py`: `nominal_scenario()`, `run_pid()`/`run_mpc()` returning the same `landing_summary` format for both): verified to exactly reproduce the already-confirmed PID (steps 27-29) and MPC (step 39) results
+- [ ] Migrate parameters to `configs/*.yaml` ← **next step**
 - [ ] Experiment A — nominal PID vs MPC comparison
 - [ ] Add wind (`environment.py`), repeat experiment
 - [ ] Initial velocity/mass error variants

@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 40**
+**AKTUALNY KROK: 41**
 
 ## Faza A — Setup i porządki
 
@@ -263,10 +263,18 @@ fallback → wykresy) działa od startu do końca bez błędów.* ✅ ZALICZONY
 
 ## Faza E — Eksperymenty i odporność
 
-- [ ] 40. Standaryzacja scenariuszy startowych i zbierania metryk dla PID i MPC.
-      **← następny krok**
+- [x] 40. Standaryzacja scenariuszy startowych i zbierania metryk dla PID i MPC:
+      `experiments/runners.py` — `nominal_scenario()` (jeden, współdzielony
+      scenariusz startowy, zamiast ręcznego wpisywania tych samych 7 liczb
+      w każdym skrypcie), `run_pid()`/`run_mpc()` (ten sam format wyniku —
+      słownik `landing_summary` + etykieta `controller` — dla obu
+      regulatorów, gotowe do zestawienia w tabeli w kroku 42).
+      Zweryfikowane (`scripts/steps/check_step40.py`): obie funkcje
+      odtwarzają DOKŁADNIE już potwierdzone wyniki z kroków 27-29 (PID) i
+      39 (MPC), do pełnej precyzji floatów ✓.
 - [ ] 41. Migracja parametrów do `configs/*.yaml` (dopiero teraz — łatwe
       przełączanie scenariuszy między eksperymentami).
+      **← następny krok**
 - [ ] 42. Eksperyment A: nominalne porównanie PID vs MPC, tabela wyników.
 - [ ] 43. Dodanie wiatru (`environment.py`) i powtórzenie eksperymentu.
 - [ ] 44. Błąd początkowej prędkości i masy — kolejne warianty eksperymentu C.
