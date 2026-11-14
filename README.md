@@ -8,7 +8,7 @@
 
 ![status](https://img.shields.io/badge/status-in%20progress-yellow)
 ![phase](https://img.shields.io/badge/phase-D%20%7C%20MPC%20transition-blue)
-![progress](https://img.shields.io/badge/progress-38%2F57%20steps-orange)
+![progress](https://img.shields.io/badge/progress-39%2F57%20steps-orange)
 ![python](https://img.shields.io/badge/python-3.14-3776AB)
 ![solver](https://img.shields.io/badge/NLP-CasADi%20%2B%20IPOPT-informational)
 
@@ -36,14 +36,14 @@ It's deliberately **not** a 6-DoF, aerodynamically exact rocket simulator — se
 
 ## 📊 Progress
 
-**38 / 57 steps done — Phase D (MPC transition) in progress.**
+**39 / 57 steps done — Phase D (MPC transition) complete, Phase E starting.**
 
 ```
 Phase A  Setup & housekeeping        ████████████████████ 8/8   ✅
 Phase B  Physics & simulator         ████████████████████ 14/14 ✅
 Phase C  Baseline PID controller     ████████████████████ 7/7   ✅
-Phase D  Transition to MPC (CasADi)  ██████████████████░░ 9/10  🔧 current
-Phase E  Experiments & robustness    ░░░░░░░░░░░░░░░░░░░░ 0/11
+Phase D  Transition to MPC (CasADi)  ████████████████████ 10/10 ✅
+Phase E  Experiments & robustness    ░░░░░░░░░░░░░░░░░░░░ 0/11  🔧 current
 Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░░░░░░░ 0/7
 ```
 
@@ -96,8 +96,8 @@ Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░�
 
 </details>
 
-<details open>
-<summary><b>🔧 Phase D — Transition to MPC (CasADi)</b> (9/10, current phase)</summary>
+<details>
+<summary><b>✅ Phase D — Transition to MPC (CasADi)</b> (10/10)</summary>
 
 - [x] Symbolic dynamics in CasADi (`casadi_dynamics()` in `controllers/mpc.py`): independent rewrite, numerically matches `dynamics.py` exactly on hover + tilted test cases
 - [x] CasADi RK4 discretization (`casadi_rk4_step()`, independent of the simulator's integrator): matches `rk4_step()` exactly on hover + tilted test cases, different `dt` values
@@ -108,18 +108,14 @@ Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░�
 - [x] Receding-horizon MPC loop (`simulate_mpc()` in `controllers/mpc.py`): re-solves the NLP from the real current state every step, applies only `U_opt[:, 0]` via the simulator's own `rk4_step()`/`clamp_control()` (independent of the controller's internal CasADi model); verified over 5 real steps that the applied control genuinely changes step to step (plan is recomputed, not cached)
 - [x] Warm-start from the previous solution (`simulate_mpc()` feeds its own shifted solution forward as the next solve's initial guess): verified over 8 real steps — identical iteration count on step 0 (no prior solution either way), drastically fewer IPOPT iterations from step 1 onward (92 vs 349 total), nearly identical final states
 - [x] Solver-failure handling (`simulate_mpc()` catches IPOPT `RuntimeError`, logs a warning, falls back to the last applied control or a hover default): verified on a normal scenario (0 failures) and a deliberately infeasible-from-the-start one (failure logged, exact hover-thrust fallback applied, simulation did not crash)
-- [ ] First full nominal MPC landing + plots ← **next step**
-- [ ] Receding-horizon MPC loop
-- [ ] Warm-start from the previous solution
-- [ ] Solver-failure handling
-- [ ] First full nominal MPC landing + plots
+- [x] First full nominal MPC landing + plots (`plot_full_mpc_landing()` in `scripts/plot_profile.py`): full closed loop runs start-to-finish without crashing, but with today's un-tuned weights the landing is **not soft** — touchdown at ≈49.39 m/s (worse than the PID baseline's 10.8 m/s), 30/83 real steps needed the step-38 fallback near the ground, ~10.2 avg IPOPT iterations/step thanks to warm-starting. `vz` accelerates downward at first (position-error term dominates), then starts braking too late once position error shrinks near the pad — confirming, over a full flight, the step 35/36 finding that weight tuning (step 47) is required for an actual soft landing
 
 </details>
 
-<details>
-<summary><b>⏳ Phase E — Experiments and robustness</b> (0/11)</summary>
+<details open>
+<summary><b>🔧 Phase E — Experiments and robustness</b> (0/11, current phase)</summary>
 
-- [ ] Standardized scenarios & metrics for PID and MPC
+- [ ] Standardized scenarios & metrics for PID and MPC ← **next step**
 - [ ] Migrate parameters to `configs/*.yaml`
 - [ ] Experiment A — nominal PID vs MPC comparison
 - [ ] Add wind (`environment.py`), repeat experiment

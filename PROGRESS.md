@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 39**
+**AKTUALNY KROK: 40**
 
 ## Faza A — Setup i porządki
 
@@ -235,15 +235,36 @@ w Fazie D/E)
       sztuczka co test 3 w kroku 34) — solver poprawnie zgłasza błąd,
       ostrzeżenie zalogowane, zastosowane sterowanie zastępcze = dokładnie
       `initial_mass * g` (245166.25 N), symulacja NIE przerywa się błędem ✓.
-- [ ] 39. Pierwsze pełne nominalne lądowanie z MPC + wykresy.
-      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
+- [x] 39. Pierwsze pełne nominalne lądowanie z MPC + wykresy: `plot_full_mpc_landing()`
+      w `scripts/plot_profile.py` (kod "glue"/wizualizacja), uruchamia
+      `simulate_mpc()` (kroki 36-38) do pełnego lądowania, ten sam
+      scenariusz startowy co PID (x=100,y=50,z=500,vz=-50), rysuje
+      trajektorię 3D + przebiegi czasowe + `landing_summary`.
+      Zweryfikowane (uruchomione przez użytkownika, sprawdzone wizualnie
+      i liczbowo): symulacja kończy się bez błędu (dzięki fallbackowi z
+      kroku 38), ale lądowanie NIE jest miękkie — flight_time=8.3s,
+      position_error≈57.39m, touchdown_speed≈**49.39 m/s** (zderzenie,
+      nie lądowanie; gorzej niż baseline PID 10.8 m/s), fuel_used≈723.9kg;
+      fallback solvera użyty na 30/83 kroków rzeczywistych (ostatnia faza
+      lotu), średnio ~10.2 iteracji IPOPT/krok (dzięki ciepłemu startowi).
+      Zgodne z oczekiwaniem z kroku 35/36: `vz` najpierw PRZYSPIESZA
+      (-50→-72 m/s, dominacja błędu pozycji), potem zaczyna zwalniać
+      (-72→-49 m/s, bo błąd pozycji maleje blisko lądowiska i błąd
+      prędkości zaczyna przeważać) — ale ZA PÓŹNO, stąd zderzenie i
+      niewykonalność solvera pod koniec. Potwierdza (teraz na całym
+      locie, nie tylko podglądzie) konieczność kalibracji wag w kroku 47
+      — opisane też w `thesis/docx/rozdzial_06_mpc.md` §6.10.
 
 *Punkt kontrolny Fazy D: MPC samodzielnie prowadzi rakietę do lądowania w
-scenariuszu nominalnym.*
+scenariuszu nominalnym — lądowanie jest NIEUDANE/NIEMIĘKKIE do czasu
+kalibracji wag (krok 47), ale cała pętla (NLP → ograniczenia → warm-start →
+fallback → wykresy) działa od startu do końca bez błędów.* ✅ ZALICZONY
+(z opisanym wyżej zastrzeżeniem co do jakości lądowania)
 
 ## Faza E — Eksperymenty i odporność
 
 - [ ] 40. Standaryzacja scenariuszy startowych i zbierania metryk dla PID i MPC.
+      **← następny krok**
 - [ ] 41. Migracja parametrów do `configs/*.yaml` (dopiero teraz — łatwe
       przełączanie scenariuszy między eksperymentami).
 - [ ] 42. Eksperyment A: nominalne porównanie PID vs MPC, tabela wyników.

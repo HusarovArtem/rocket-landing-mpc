@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from rocket_landing.controllers.mpc import MpcWeights, simulate_mpc
 from rocket_landing.controllers.pid import PIDController
 from rocket_landing.metrics import landing_summary
 from rocket_landing.params import VehicleParams
@@ -8,6 +9,7 @@ from rocket_landing.actuators import clamp_control
 from rocket_landing.reference import LandingTarget
 from rocket_landing.simulation import simulate, simulate_vertical_pid
 from rocket_landing.simulation import simulate_pid
+from scripts.steps.check_step32 import weights, target
 
 
 def plot_fixed_thrust_profile():
@@ -238,5 +240,79 @@ def plot_full_pid_landing():
     print("Landing summary:", summary)
 
 
+def plot_full_mpc_landing():
+    """
+    Runs ONE complete, closed-loop MPC landing (x=100, y=50, vz=-50)
+    """
+    p = VehicleParams()
+    weights = MpcWeights()
+    target = LandingTarget()
+
+    state0 = np.array([100.0, 50.0, 500.0, 0.0, 0.0, -50.0, p.initial_mass])
+    N = 30
+    dt = 0.1
+
+    times, states, controls, iter_counts, solve_failed, = simulate_mpc(
+        state0, p, weights, target, N, dt, max_steps=2000, warm_start=True
+    )
+
+    x = states[:, 0]
+    y = states[:, 1]
+    z = states[:, 2]
+    vz = states[:, 5]
+
+    target = LandingTarget()
+
+    # --- Plot 1: the 3D flight path ---
+    fig_3d = plt.figure(figsize=(7, 7))
+    ax = fig_3d.add_subplot(111, projection="3d")
+
+    ax.plot(x, y, z, label="trajectory")
+    ax.scatter(x[0], y[0], z[0], color="green", s=60, label="start")
+    ax.scatter(x[-1], y[-1], z[-1], color="red", s=60, label="landing")
+    ax.scatter(
+        target.position[0], target.position[1], target.position[2],
+        color="black", marker="x", s=80, label="pad (target)"
+    )
+    ax.set_xlabel("x [m]")
+    ax.set_ylabel("y [m]")
+    ax.set_zlabel("z (height) [m]")
+    ax.set_title("Full MPC landing  (untuned weights) - 3D trajectory")
+    ax.legend()
+    plt.tight_layout()
+
+    # --- Plot 2: time series, 3 stacked subplots ---
+    fig_ts, axes = plt.subplots(3, 1, sharex=True, figsize=(7, 9))
+
+    axes[0].plot(times, z)
+    axes[0].axhline(0.0, color="gray", linestyle="--", linewidth=1)
+    axes[0].set_ylabel("height z [m]")
+    axes[0].grid(True)
+
+    axes[1].plot(times, x, label="x")
+    axes[1].plot(times, y, label="y")
+    axes[1].axhline(0.0, color="gray", linestyle="--", linewidth=1)
+    axes[1].set_ylabel("horizontal pos. [m]")
+    axes[1].legend()
+    axes[1].grid(True)
+
+    axes[2].plot(times, vz)
+    axes[2].axhline(0.0, color="gray", linestyle="--", linewidth=1)
+    axes[2].set_ylabel("vertical speed [m/s]")
+    axes[2].set_xlabel("time [s]")
+    axes[2].grid(True)
+
+    fig_ts.suptitle("Full MPC landing (untuned weights) - time series")
+    plt.tight_layout()
+
+    plt.show()  # shows BOTH figures (3D path + times series) at once
+
+    # -- Evaluation: the metrics.py report card --
+    summary = landing_summary(times, states, target, p.initial_mass)
+    print("Landing summary:", summary)
+    print(f"Solver-failure fallback user on {sum(solve_failed) / len(solve_failed)} real steps")
+    print(F"Average IPOPT iterations per step: {sum(iter_counts) / len(iter_counts):.1f}")
+
+
 if __name__ == "__main__":
-    plot_full_pid_landing()
+    plot_full_mpc_landing()
