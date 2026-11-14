@@ -1,9 +1,11 @@
 import casadi as ca
 import numpy as np
+import logging
 
 from rocket_landing.actuators import clamp_control
 from rocket_landing.integrators import rk4_step
 
+logger = logging.getLogger(__name__)
 
 def casadi_dynamics(state, control, params):
     """
@@ -342,6 +344,7 @@ def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000, warm_st
     states = [np.array(state0, dtype=float)]
     controls = []
     iter_counts=[]
+    solve_failed=[]
 
     u_prev = None # no REAL prev control exists yet at the first step
     X_guess = None
@@ -350,12 +353,29 @@ def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000, warm_st
     for i in range(max_steps):
         current_state = states[-1] # last element (current)
 
-        X_opt, U_opt, iters = solve_open_loop_trajectory(
-            params, weights, target, current_state, N, dt,
-            u_prev=u_prev, X_guess=X_guess, U_guess=U_guess
-        )
+        try:
+            X_opt, U_opt, iters = solve_open_loop_trajectory(
+                params, weights, target, current_state, N, dt,
+                u_prev=u_prev, X_guess=X_guess, U_guess=U_guess
+            )
+            failed = False
+        except RuntimeError as e:
+            logger.warning("MPC solve failed at real step: %d: %s", i, e)
+            failed = True
+            iters = 0
+            X_opt, U_opt = None, None
+
+        if failed:
+            if u_prev is not None:
+                control = u_prev
+            else:
+                control = np.array([params.initial_mass * params.g, 0.0, 0.0])
+            control = clamp_control(control, params)
+        else:
+            control = clamp_control(U_opt[:, 0], params)
+
+        solve_failed.append(failed)
         iter_counts.append(iters)
-        control = clamp_control(U_opt[:, 0], params)
 
         next_state = rk4_step(current_state, control, params, dt)
         times.append(times[-1] + dt)
@@ -364,10 +384,10 @@ def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000, warm_st
 
         u_prev = control
 
-        if warm_start:
+        if warm_start and not failed:
             X_guess = np.hstack([X_opt[:, 1:], X_opt[:, -1:]])
             U_guess = np.hstack([U_opt[:, 1:], U_opt[:, -1:]])
-        else:
+        elif not warm_start:
             X_guess = None
             U_guess = None
 
@@ -376,4 +396,4 @@ def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000, warm_st
         if next_state[6] <= params.dry_mass: # mass <= dry mass
             break
 
-    return np.array(times), np.array(states), np.array(controls), iter_counts
+    return np.array(times), np.array(states), np.array(controls), iter_counts, solve_failed

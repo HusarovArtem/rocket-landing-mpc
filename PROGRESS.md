@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 38**
+**AKTUALNY KROK: 39**
 
 ## Faza A — Setup i porządki
 
@@ -225,9 +225,18 @@ w Fazie D/E)
       mniejsza z ciepłym startem (suma 92 vs 349 iteracji na krokach 1-7);
       końcowe stany niemal identyczne (różnica ≈0.39, w granicach różnych
       lokalnych optimów zadania nieliniowego) ✓.
-- [ ] 38. Obsługa niepowodzenia solvera (logowanie, fallback).
-      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
+- [x] 38. Obsługa niepowodzenia solvera (logowanie, fallback): `simulate_mpc()`
+      łapie `RuntimeError` z `opti.solve()`, loguje ostrzeżenie
+      (`logger.warning`) i stosuje bezpieczne sterowanie zastępcze —
+      ostatnio zastosowane `u_prev`, a przy braku `u_prev` (pierwszy krok)
+      sterowanie "zawisu" (ciąg = masa·g, brak nachylenia). Zweryfikowane
+      (`scripts/steps/check_step38.py`, 2 testy): scenariusz normalny — 0
+      niepowodzeń; scenariusz specjalnie niewykonalny od startu (ta sama
+      sztuczka co test 3 w kroku 34) — solver poprawnie zgłasza błąd,
+      ostrzeżenie zalogowane, zastosowane sterowanie zastępcze = dokładnie
+      `initial_mass * g` (245166.25 N), symulacja NIE przerywa się błędem ✓.
 - [ ] 39. Pierwsze pełne nominalne lądowanie z MPC + wykresy.
+      **← następny krok w `CODE_TO_BE_REWRITTEN.py`**
 
 *Punkt kontrolny Fazy D: MPC samodzielnie prowadzi rakietę do lądowania w
 scenariuszu nominalnym.*
