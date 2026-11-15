@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 42**
+**AKTUALNY KROK: 43**
 
 ## Faza A — Setup i porządki
 
@@ -285,9 +285,17 @@ fallback → wykresy) działa od startu do końca bez błędów.* ✅ ZALICZONY
       transkrypcji (podwójne `self` w wywołaniu, brak `config_path=None`,
       brak `import yaml`, literówki w nazwach pól YAML i w ścieżce
       `config/` vs `configs/`).
-- [ ] 42. Eksperyment A: nominalne porównanie PID vs MPC, tabela wyników.
-      **← następny krok**
+- [x] 42. Eksperyment A: nominalne porównanie PID vs MPC, tabela wyników:
+      `experiment_a()` w `experiments/experiment_a.py`, wywołuje
+      `run_pid()`/`run_mpc()` (krok 40) na `nominal_scenario()` i drukuje
+      tabelę porównawczą. Zweryfikowane (`scripts/steps/check_step42.py`):
+      wszystkie liczby identyczne z już potwierdzonymi w krokach 40-41.
+      Wynik: PID wygrywa na dziś pod każdym względem oprócz paliwa
+      (błąd pozycji 30,58 vs 57,39 m; prędkość przyziemienia 10,83 vs
+      **49,39 m/s**; paliwo 1772 vs 724 kg) — uczciwy punkt startowy PRZED
+      kalibracją wag MPC (krok 47), nie ostateczny wniosek "MPC gorszy".
 - [ ] 43. Dodanie wiatru (`environment.py`) i powtórzenie eksperymentu.
+      **← następny krok**
 - [ ] 44. Błąd początkowej prędkości i masy — kolejne warianty eksperymentu C.
 - [ ] 45. Niezgodność modelu MPC vs "prawdziwego" symulatora (inny ciąg/Isp).
 - [ ] 46. Eksperyment B: siatka warunków początkowych, mapa sukces/porażka.
