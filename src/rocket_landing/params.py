@@ -1,5 +1,7 @@
 import math
 
+import yaml
+
 class VehicleParams:
     """
     Physical constants and limits describing our educational rocker stage.
@@ -9,7 +11,7 @@ class VehicleParams:
     that in the next couple of steps, with free-fall and hover tests).
     """
 
-    def __init__(self):
+    def __init__(self, config_path=None):
         # ------ Mass properties ------------------------------------------
         # Total mass at the START of the landing burn, in KG
         # This includes the dry structure PLUS the fuel left for landing.
@@ -51,5 +53,38 @@ class VehicleParams:
         # tilt away from straight up, math.radians() converts degrees (which
         # humans think in) to radians (which the math/trig function need)
         self.max_tilt_angle = math.radians(20.0) # about 0.349 rad
+
+        if config_path is not None:
+            self._load_from_yaml(config_path)
+
+    def _load_from_yaml(self, config_path):
+        """
+        Overides whichever of the defaults aboce are PRESENT in the
+        YAML file at config_path - anything the file doesn't mention
+        just keeps its hardcoded default from __init__() above.
+
+        max_titl_angle_deg is given in DEGREES in the YAML (human-
+        readable, same convention as the math.radians() call above) -
+        coverted to radians here, same as __init__() does.
+        """
+        with open(config_path) as f:
+            data = yaml.safe_load(f)
+
+        if "initial_mass" in data:
+            self.initial_mass = data["initial_mass"]
+        if "dry_mass" in data:
+            self.dry_mass = data["dry_mass"]
+        if "isp" in data:
+            self.isp = data["isp"]
+        if "g0" in data:
+            self.g0 = data["g0"]
+        if "max_thrust" in data:
+            self.max_thrust = data["max_thrust"]
+        if "min_thrust" in data:
+            self.min_thrust = data["min_thrust"]
+        if "g" in data:
+            self.g = data["g"]
+        if "max_tilt_angle_deg" in data:
+            self.max_tilt_angle = math.radians(data["max_tilt_angle_deg"])
 
 

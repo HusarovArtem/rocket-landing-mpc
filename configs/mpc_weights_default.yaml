@@ -1,0 +1,6 @@
+Qr: 1.0       # running cost: position error
+Qv: 1.0       # running cost: velocity error
+R: 1.0e-6     # running cost: control effort size
+S: 1.0e-6     # running cost: control change (delta_u)
+Qf: 10.0      # terminal cost: final position AND velocity weight
+w_m: 0.001    # terminal cost: fuel used

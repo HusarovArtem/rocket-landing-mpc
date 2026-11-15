@@ -1,0 +1,8 @@
+initial_mass: 25000.0     # kg
+dry_mass: 22000.0         # kg
+isp: 300.0                # seconds
+g0: 9.80665               # m/s^2
+max_thrust: 400000.0      # N
+min_thrust: 150000.0      # N
+g: 9.80665                # m/s^2
+max_tilt_angle_deg: 20.0  # degrees (converted to radians when loaded)

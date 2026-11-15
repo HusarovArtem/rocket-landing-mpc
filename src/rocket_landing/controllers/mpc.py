@@ -1,6 +1,7 @@
 import casadi as ca
 import numpy as np
 import logging
+import yaml
 
 from rocket_landing.actuators import clamp_control
 from rocket_landing.integrators import rk4_step
@@ -96,7 +97,7 @@ class MpcWeights:
     """
 
 
-    def __init__(self):
+    def __init__(self, config_path=None):
         self.Qr = 1.0    # running cost: position error (per step k)
         self.Qv = 1.0    # running cost: velocity error (per step K)
         self.R = 1e-6    # running cost: control effort size (thrust is
@@ -113,6 +114,16 @@ class MpcWeights:
         self.w_m = 0.001 # terminal cost: fuel used (initial_mass - final
                          # mass) - small weight, fuel saving matters but
                          # much less than actually landing well
+        if config_path is not None:
+            self._load_from_yaml(config_path)
+
+    def _load_from_yaml(self, config_path):
+        with open(config_path) as f:
+            data = yaml.safe_load(f)
+
+        for field in ("Qr", "Qv", "R", "S", "Qf", "w_m"):
+            if field in data:
+                setattr(self, field, data[field])
 
 def stage_cost(state, control, control_prev, target, weights):
     """

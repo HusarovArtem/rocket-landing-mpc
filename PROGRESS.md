@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 41**
+**AKTUALNY KROK: 42**
 
 ## Faza A — Setup i porządki
 
@@ -272,10 +272,21 @@ fallback → wykresy) działa od startu do końca bez błędów.* ✅ ZALICZONY
       Zweryfikowane (`scripts/steps/check_step40.py`): obie funkcje
       odtwarzają DOKŁADNIE już potwierdzone wyniki z kroków 27-29 (PID) i
       39 (MPC), do pełnej precyzji floatów ✓.
-- [ ] 41. Migracja parametrów do `configs/*.yaml` (dopiero teraz — łatwe
-      przełączanie scenariuszy między eksperymentami).
-      **← następny krok**
+- [x] 41. Migracja parametrów do `configs/*.yaml` (dopiero teraz — łatwe
+      przełączanie scenariuszy między eksperymentami): `VehicleParams` i
+      `MpcWeights` dostały opcjonalny argument `config_path` (domyślnie
+      `None` — zero zmian dla wszystkich istniejących wywołań) oraz metodę
+      `_load_from_yaml()`, nadpisującą tylko te pola, które są w pliku YAML.
+      Utworzono `configs/vehicle_nominal.yaml` i
+      `configs/mpc_weights_default.yaml` (zwierciadła dzisiejszych wartości
+      domyślnych). Zweryfikowane (`scripts/steps/check_step41.py`): 14/14
+      pól (8 `VehicleParams` + 6 `MpcWeights`) identyczne między wartością
+      domyślną i wczytaną z YAML ✓. Po drodze poprawiono kilka błędów
+      transkrypcji (podwójne `self` w wywołaniu, brak `config_path=None`,
+      brak `import yaml`, literówki w nazwach pól YAML i w ścieżce
+      `config/` vs `configs/`).
 - [ ] 42. Eksperyment A: nominalne porównanie PID vs MPC, tabela wyników.
+      **← następny krok**
 - [ ] 43. Dodanie wiatru (`environment.py`) i powtórzenie eksperymentu.
 - [ ] 44. Błąd początkowej prędkości i masy — kolejne warianty eksperymentu C.
 - [ ] 45. Niezgodność modelu MPC vs "prawdziwego" symulatora (inny ciąg/Isp).
