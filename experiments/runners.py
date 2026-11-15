@@ -23,7 +23,7 @@ def nominal_scenario():
     return np.array([100.0, 50.0, 500.0, 0.0, 0.0, -50.0, params.initial_mass])
 
 
-def run_pid(state0, params, dt=0.05):
+def run_pid(state0, params, dt=0.05, wind=None):
     """
     Runs the PID baseline (same gains as steps 25-27/29) on `state0` and
     returns (times, states, summary) - summary is the SAME landing_summary()
@@ -34,7 +34,7 @@ def run_pid(state0, params, dt=0.05):
     pid_x = PIDController(kp=500.0, ki=0.0, kd=2000.0)
     pid_y = PIDController(kp=500.0, ki=0.0, kd=2000.0)
 
-    times, states = simulate_pid(state0, pid_vz, pid_x, pid_y, params, dt)
+    times, states = simulate_pid(state0, pid_vz, pid_x, pid_y, params, dt, wind)
 
     target = LandingTarget()
     summary = landing_summary(times, states, target, params.initial_mass)
@@ -43,7 +43,7 @@ def run_pid(state0, params, dt=0.05):
     return times, states, summary
 
 
-def run_mpc(state0, params, weights, N=30, dt=0.1, max_steps=2000, warm_start=True):
+def run_mpc(state0, params, weights, N=30, dt=0.1, max_steps=2000, warm_start=True, wind=None):
     """
     Runs the full receding-horizon MPC loop (steps 36-38) on `state0`
     and returns (times, states, summary) - the SAME landing_summary()
@@ -54,7 +54,8 @@ def run_mpc(state0, params, weights, N=30, dt=0.1, max_steps=2000, warm_start=Tr
     target = LandingTarget()
 
     times, states, controls, iter_counts, solve_failed = simulate_mpc(
-        state0, params, weights, target, N, dt, max_steps=max_steps, warm_start=warm_start
+        state0, params, weights, target, N, dt, max_steps=max_steps, warm_start=warm_start, wind=wind
+
     )
 
     summary = landing_summary(times, states, target, params.initial_mass)

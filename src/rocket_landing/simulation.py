@@ -94,7 +94,7 @@ def simulate_vertical_pid(state0, pid, params, dt, max_steps=100000):
 
     return np.array(times), np.array(states)
 
-def simulate_pid(state0, pid_vz, pid_x, pid_y, params, dt, max_steps=100000):
+def simulate_pid(state0, pid_vz, pid_x, pid_y, params, dt, wind=None, max_steps=100000):
     """
     Full 3D closed-loop landing attempt: the vertical PID (pid_vz) still
     controls vz exactly like in step 25 (thrust = hover_thrust + correction)
@@ -150,7 +150,7 @@ def simulate_pid(state0, pid_vz, pid_x, pid_y, params, dt, max_steps=100000):
 
         control = clamp_control(np.array([thrust, alpha, beta]), params)
 
-        next_state = rk4_step(current_state, control, params, dt)
+        next_state = rk4_step(current_state, control, params, dt, wind)
         times.append(times[-1] + dt)
         states.append(next_state)
 

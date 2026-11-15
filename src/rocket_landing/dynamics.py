@@ -63,7 +63,7 @@ def thrust_direction(alpha, beta):
 
     return np.array([x, y, z])
 
-def dynamics(state, control, params):
+def dynamics(state, control, params, wind=None):
     """
     The REAL equations of motion: gravity + engine thrust + fuel burn.
     No air resistance yet (see docs/assumptions.md - that's delibaretely
@@ -102,6 +102,9 @@ def dynamics(state, control, params):
     # just add up as vectors (gravity doesn't care about thrust, and thrust
     # doesn't care about gravity).
     acceleration = gravity_acceleration + thrust_acceleration
+
+    if wind is not None:
+        acceleration = acceleration + wind.acceleration()
 
     # Mass flow equation (see params.py comment on isp): the bigger the
     # thrust, the faster fuel is burned. mass_rate is NEGATIVE bcs mass

@@ -321,7 +321,7 @@ def solve_open_loop_trajectory(params, weights, target, x0, N, dt, u_prev=None, 
     return sol.value(X), sol.value(U), sol.stats()["iter_count"]
 
 
-def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000, warm_start= True):
+def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000, warm_start= True, wind=None):
     """
     The receding-horizon MPC loop (step 36): at EVERY real time step,
     solve a FRESH NLP from the rocket's current REAL state, apply ONLY
@@ -388,7 +388,7 @@ def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000, warm_st
         solve_failed.append(failed)
         iter_counts.append(iters)
 
-        next_state = rk4_step(current_state, control, params, dt)
+        next_state = rk4_step(current_state, control, params, dt, wind)
         times.append(times[-1] + dt)
         states.append(next_state)
         controls.append(control)

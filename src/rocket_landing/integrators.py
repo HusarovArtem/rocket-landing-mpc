@@ -29,7 +29,7 @@ def euler_step(state, control, params, dt):
     derivative = dynamics(state, control, params)
     return state + dt * derivative
 
-def rk4_step(state, control, params, dt):
+def rk4_step(state, control, params, dt, wind=None):
     """
     Advances 'state' forward by one step 'dt' using RK4
     (4th-order Runge-Kutta) - a much more accurate alternative
@@ -45,19 +45,19 @@ def rk4_step(state, control, params, dt):
     """
     # k1: the derivative at the very start of the step (this is the
     # ONLY thing euler_Step uses)
-    k1 = dynamics(state, control, params)
+    k1 = dynamics(state, control, params, wind)
 
     # k2: take a trial half-step forward using K1, then re-check the
     # derivative there - a first "probe" into the middle of the interval
-    k2 = dynamics(state + dt / 2 * k1, control, params)
+    k2 = dynamics(state + dt / 2 * k1, control, params, wind)
 
     # k3: take another trial half-step, this time using k2's slope
     # instead of k1`s - a second, refined probe at the middle
-    k3 = dynamics(state + dt / 2 * k2, control, params)
+    k3 = dynamics(state + dt / 2 * k2, control, params, wind)
 
     # k4: take a trial FULL step using k3, then check the derivative
     # at the (estimated) END of the interval
-    k4 = dynamics(state + dt * k3, control, params)
+    k4 = dynamics(state + dt * k3, control, params, wind)
 
     # combine all four slope estimates with the classic
     # RK4 weights (1, 2, 2, 1) / 6 - these specific wights

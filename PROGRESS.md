@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 43**
+**AKTUALNY KROK: 44**
 
 ## Faza A — Setup i porządki
 
@@ -294,9 +294,22 @@ fallback → wykresy) działa od startu do końca bez błędów.* ✅ ZALICZONY
       (błąd pozycji 30,58 vs 57,39 m; prędkość przyziemienia 10,83 vs
       **49,39 m/s**; paliwo 1772 vs 724 kg) — uczciwy punkt startowy PRZED
       kalibracją wag MPC (krok 47), nie ostateczny wniosek "MPC gorszy".
-- [ ] 43. Dodanie wiatru (`environment.py`) i powtórzenie eksperymentu.
-      **← następny krok**
+- [x] 43. Dodanie wiatru (`environment.py`: klasa `Wind`, stałe przyspieszenie
+      zakłócające — NIE prawdziwy opór aerodynamiczny, patrz uproszczenie w
+      dokumentacji modułu) i powtórzenie eksperymentu: `experiment_a_wind()`
+      w `experiments/experiment_a.py`. Wiatr podłączony WYŁĄCZNIE do
+      rzeczywistej fizyki (`rk4_step`/`dynamics`), NIE do wewnętrznego modelu
+      MPC (`casadi_rk4_step`) — kontroler nie "wie" o wietrze z góry.
+      Zweryfikowane: (1) test fizyczny w izolacji (czyste przyspieszenie
+      ax=1.0, 1s) — x=0.5, vx=1.0, zgodne z kinematyką dokładnie; (2) po
+      poprawce transkrypcji (`Wind.acceleration()` zwracało `ax` na miejscu
+      `az` — wiatr omyłkowo dodawał przyspieszenie PIONOWE) wynik dla
+      ax=0.3: PID błąd pozycji 30,58→16,32 m (wiatr PRZYPADKOWO kompensuje
+      istniejące przeregulowanie PID w -x, nie jest to ogólna "poprawa od
+      wiatru"), MPC błąd pozycji 57,39→66,74 m; zużycie paliwa obu
+      regulatorów praktycznie niezmienione (czysto boczne zakłócenie) ✓.
 - [ ] 44. Błąd początkowej prędkości i masy — kolejne warianty eksperymentu C.
+      **← następny krok**
 - [ ] 45. Niezgodność modelu MPC vs "prawdziwego" symulatora (inny ciąg/Isp).
 - [ ] 46. Eksperyment B: siatka warunków początkowych, mapa sukces/porażka.
 - [ ] 47. Eksperyment D: sweep parametrów MPC (horyzont, wagi, częstotliwość
