@@ -37,7 +37,7 @@ def run_pid(state0, params, dt=0.05, wind=None):
     times, states = simulate_pid(state0, pid_vz, pid_x, pid_y, params, dt, wind)
 
     target = LandingTarget()
-    summary = landing_summary(times, states, target, params.initial_mass)
+    summary = landing_summary(times, states, target, state0[6])
     summary["controller"] = "PID"
 
     return times, states, summary
@@ -58,7 +58,7 @@ def run_mpc(state0, params, weights, N=30, dt=0.1, max_steps=2000, warm_start=Tr
 
     )
 
-    summary = landing_summary(times, states, target, params.initial_mass)
+    summary = landing_summary(times, states, target, state0[6])
     summary["controller"] = "MPC"
     summary["solver_failures"] = sum(solve_failed)
     summary["avg_iterations"] = sum(iter_counts) / len(iter_counts)

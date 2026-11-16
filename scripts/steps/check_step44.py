@@ -1,0 +1,3 @@
+from experiments.experiment_c import experiment_c_initial_error
+
+experiment_c_initial_error()

@@ -308,9 +308,31 @@ fallback → wykresy) działa od startu do końca bez błędów.* ✅ ZALICZONY
       istniejące przeregulowanie PID w -x, nie jest to ogólna "poprawa od
       wiatru"), MPC błąd pozycji 57,39→66,74 m; zużycie paliwa obu
       regulatorów praktycznie niezmienione (czysto boczne zakłócenie) ✓.
-- [ ] 44. Błąd początkowej prędkości i masy — kolejne warianty eksperymentu C.
-      **← następny krok**
+- [x] 44. Błąd początkowej prędkości i masy — kolejne warianty eksperymentu C:
+      `scenario_with_initial_error()` i `experiment_c_initial_error()` w nowym
+      pliku `experiments/experiment_c.py` (osobny plik per literę eksperymentu,
+      zamiast dopisywania do `experiment_a.py`). Scenariusz: rakieta faktycznie
+      startuje z vz=-60 m/s (10 m/s szybciej niż nominalne -50) i masą mniejszą
+      o 500 kg (24500 kg zamiast 25000 kg) — kontroler widzi stan startowy
+      POPRAWNIE, błąd jest tylko w samym starcie rakiety, nie w jego percepcji
+      (to odróżnia ten eksperyment od wiatru z kroku 43 i niezgodności modelu
+      z kroku 45). Zweryfikowane (`scripts/steps/check_step44.py`): (1)
+      regresja — PID/MPC na `nominal_scenario()` identyczne z krokami 40-43 ✓;
+      (2) sam eksperyment — PID: błąd pozycji 30,58→11,08 m, prędkość
+      przyziemienia 10,83→25,01 m/s, paliwo 1772,47→1287,95 kg; MPC: błąd
+      pozycji 57,39→56,78 m, prędkość 49,39→54,29 m/s, paliwo 723,94→683,19 kg
+      — zgodne z wyliczeniem referencyjnym do pełnej precyzji ✓. Po drodze dwa
+      błędy transkrypcji: `state0 += mass_error` zamiast `state0[6] +=
+      mass_error` (dodawało -500 do WSZYSTKICH 7 elementów stanu, w tym do
+      wysokości z=500→0, stąd pierwsze uruchomienie dało absurdalne ~889 m/s
+      przy "lądowaniu"), i odwrócony znak `vz_error=10.0` zamiast `-10.0`
+      (rakieta przypadkowo spadała WOLNIEJ, nie szybciej, niż nominalnie).
+      Wzorzec (prawdziwy, nie błąd): rakieta zaczynająca szybciej ma MNIEJ
+      czasu na cykl bocznego przeregulowania PID (mniejszy błąd pozycji), ale
+      TEŻ mniej czasu na wyhamowanie dodatkowej prędkości (znacznie ostrzejsze
+      przyziemienie) — rzeczywisty trade-off, nie niekonsekwencja.
 - [ ] 45. Niezgodność modelu MPC vs "prawdziwego" symulatora (inny ciąg/Isp).
+      **← następny krok**
 - [ ] 46. Eksperyment B: siatka warunków początkowych, mapa sukces/porażka.
 - [ ] 47. Eksperyment D: sweep parametrów MPC (horyzont, wagi, częstotliwość
       sterowania).

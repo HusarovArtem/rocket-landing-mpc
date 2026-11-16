@@ -8,7 +8,7 @@
 
 ![status](https://img.shields.io/badge/status-in%20progress-yellow)
 ![phase](https://img.shields.io/badge/phase-D%20%7C%20MPC%20transition-blue)
-![progress](https://img.shields.io/badge/progress-43%2F57%20steps-orange)
+![progress](https://img.shields.io/badge/progress-44%2F57%20steps-orange)
 ![python](https://img.shields.io/badge/python-3.14-3776AB)
 ![solver](https://img.shields.io/badge/NLP-CasADi%20%2B%20IPOPT-informational)
 
@@ -36,14 +36,14 @@ It's deliberately **not** a 6-DoF, aerodynamically exact rocket simulator — se
 
 ## 📊 Progress
 
-**43 / 57 steps done — Phase D (MPC transition) complete, Phase E in progress.**
+**44 / 57 steps done — Phase D (MPC transition) complete, Phase E in progress.**
 
 ```
 Phase A  Setup & housekeeping        ████████████████████ 8/8   ✅
 Phase B  Physics & simulator         ████████████████████ 14/14 ✅
 Phase C  Baseline PID controller     ████████████████████ 7/7   ✅
 Phase D  Transition to MPC (CasADi)  ████████████████████ 10/10 ✅
-Phase E  Experiments & robustness    ███████░░░░░░░░░░░░░ 4/11  🔧 current
+Phase E  Experiments & robustness    █████████░░░░░░░░░░░ 5/11  🔧 current
 Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░░░░░░░ 0/7
 ```
 
@@ -113,14 +113,14 @@ Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░�
 </details>
 
 <details open>
-<summary><b>🔧 Phase E — Experiments and robustness</b> (4/11, current phase)</summary>
+<summary><b>🔧 Phase E — Experiments and robustness</b> (5/11, current phase)</summary>
 
 - [x] Standardized scenarios & metrics for PID and MPC (`experiments/runners.py`: `nominal_scenario()`, `run_pid()`/`run_mpc()` returning the same `landing_summary` format for both): verified to exactly reproduce the already-confirmed PID (steps 27-29) and MPC (step 39) results
 - [x] Migrate parameters to `configs/*.yaml` (`VehicleParams`/`MpcWeights` gained an optional `config_path` arg + `_load_from_yaml()`, defaulting to unchanged behavior): verified 14/14 fields identical between hardcoded defaults and `configs/vehicle_nominal.yaml`/`configs/mpc_weights_default.yaml`
 - [x] Experiment A — nominal PID vs MPC comparison (`experiments/experiment_a.py`): side-by-side table confirms PID currently wins on every metric except fuel (position error 30.58 vs 57.39 m, touchdown speed 10.83 vs **49.39 m/s**, fuel 1772 vs 724 kg) — an honest baseline *before* MPC weight tuning (step 47), not a final verdict
 - [x] Add wind (`environment.py`: `Wind` class, constant disturbance acceleration — wired into the REAL simulator only, never the MPC's internal model): verified against analytic kinematics in isolation, then via `experiment_a_wind()` — PID position error 30.58→16.32 m (wind coincidentally cancels PID's existing overshoot bias, not a general improvement), MPC 57.39→66.74 m, fuel essentially unchanged for both (purely lateral disturbance)
-- [ ] Initial velocity/mass error variants ← **next step**
-- [ ] MPC-vs-"real" model mismatch (thrust/Isp)
+- [x] Initial velocity/mass error variants — Experiment C (`experiments/experiment_c.py`: `scenario_with_initial_error()`, `experiment_c_initial_error()`): rocket actually starts falling 10 m/s faster (vz=-60) and 500 kg lighter (24500 kg) than the nominal scenario assumed, controller sees the real starting state correctly — PID position error 30.58→11.08 m but touchdown speed 10.83→**25.01 m/s** (less time to brake), MPC 57.39→56.78 m / 49.39→54.29 m/s; a genuine speed/accuracy trade-off, not an inconsistency
+- [ ] MPC-vs-"real" model mismatch (thrust/Isp) ← **next step**
 - [ ] Experiment B — initial-condition success/failure map
 - [ ] Experiment D — MPC parameter sweep (horizon, weights, frequency)
 - [ ] Experiment E — Monte Carlo campaign
