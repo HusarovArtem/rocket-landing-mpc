@@ -1,0 +1,3 @@
+from experiments.experiment_d import experiment_d_guided_landing
+
+experiment_d_guided_landing()

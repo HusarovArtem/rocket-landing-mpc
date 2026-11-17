@@ -8,7 +8,7 @@
 
 ![status](https://img.shields.io/badge/status-in%20progress-yellow)
 ![phase](https://img.shields.io/badge/phase-D%20%7C%20MPC%20transition-blue)
-![progress](https://img.shields.io/badge/progress-45%2F57%20steps-orange)
+![progress](https://img.shields.io/badge/progress-46%2F57%20steps-orange)
 ![python](https://img.shields.io/badge/python-3.14-3776AB)
 ![solver](https://img.shields.io/badge/NLP-CasADi%20%2B%20IPOPT-informational)
 
@@ -36,14 +36,14 @@ It's deliberately **not** a 6-DoF, aerodynamically exact rocket simulator — se
 
 ## 📊 Progress
 
-**45 / 57 steps done — Phase D (MPC transition) complete, Phase E in progress.**
+**46 / 57 steps done — Phase D (MPC transition) complete, Phase E in progress.**
 
 ```
 Phase A  Setup & housekeeping        ████████████████████ 8/8   ✅
 Phase B  Physics & simulator         ████████████████████ 14/14 ✅
 Phase C  Baseline PID controller     ████████████████████ 7/7   ✅
 Phase D  Transition to MPC (CasADi)  ████████████████████ 10/10 ✅
-Phase E  Experiments & robustness    ██████████░░░░░░░░░░ 6/11  🔧 current
+Phase E  Experiments & robustness    ████████████░░░░░░░░ 7/11  🔧 current
 Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░░░░░░░ 0/7
 ```
 
@@ -104,25 +104,25 @@ Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░�
 - [x] Cost function as CasADi expressions (`stage_cost()`, `terminal_cost()` in `controllers/mpc.py`): manually verified against hand-worked values, `stage_cost` ≈ 50230.25, `terminal_cost` = 61.8
 - [x] NLP construction: decision variables + dynamics constraints (`build_mpc_nlp()` in `controllers/mpc.py`, CasADi `Opti`): fully-pinned test case solved by IPOPT matches a manual `casadi_rk4_step` chain exactly (max diff 0.0)
 - [x] State & actuator constraints (`add_state_and_actuator_constraints()` in `controllers/mpc.py`): thrust/tilt bounds correctly pin to their limits under a maximizing objective; forced through-the-ground and over-burn scenarios correctly reported INFEASIBLE by IPOPT
-- [x] Single open-loop NLP solve / trajectory preview (`solve_open_loop_trajectory()` in `controllers/mpc.py`): wires cost + constraints + initial condition together, IPOPT finds an optimal, fully constraint-respecting solution; revealed that today's placeholder weights don't yet produce braking behavior (expected — see [`rozdzial_06_mpc.md`](thesis/rozdzial_06_mpc.md) §6.4, real tuning is step 47)
+- [x] Single open-loop NLP solve / trajectory preview (`solve_open_loop_trajectory()` in `controllers/mpc.py`): wires cost + constraints + initial condition together, IPOPT finds an optimal, fully constraint-respecting solution; revealed that today's placeholder weights don't yet produce braking behavior (expected — see [`rozdzial_06_mpc.md`](thesis/docx/rozdzial_06_mpc.md) §6.4; turned out NOT to be a weight-tuning problem at all — see §6.11 / step 47)
 - [x] Receding-horizon MPC loop (`simulate_mpc()` in `controllers/mpc.py`): re-solves the NLP from the real current state every step, applies only `U_opt[:, 0]` via the simulator's own `rk4_step()`/`clamp_control()` (independent of the controller's internal CasADi model); verified over 5 real steps that the applied control genuinely changes step to step (plan is recomputed, not cached)
 - [x] Warm-start from the previous solution (`simulate_mpc()` feeds its own shifted solution forward as the next solve's initial guess): verified over 8 real steps — identical iteration count on step 0 (no prior solution either way), drastically fewer IPOPT iterations from step 1 onward (92 vs 349 total), nearly identical final states
 - [x] Solver-failure handling (`simulate_mpc()` catches IPOPT `RuntimeError`, logs a warning, falls back to the last applied control or a hover default): verified on a normal scenario (0 failures) and a deliberately infeasible-from-the-start one (failure logged, exact hover-thrust fallback applied, simulation did not crash)
-- [x] First full nominal MPC landing + plots (`plot_full_mpc_landing()` in `scripts/plot_profile.py`): full closed loop runs start-to-finish without crashing, but with today's un-tuned weights the landing is **not soft** — touchdown at ≈49.39 m/s (worse than the PID baseline's 10.8 m/s), 30/83 real steps needed the step-38 fallback near the ground, ~10.2 avg IPOPT iterations/step thanks to warm-starting. `vz` accelerates downward at first (position-error term dominates), then starts braking too late once position error shrinks near the pad — confirming, over a full flight, the step 35/36 finding that weight tuning (step 47) is required for an actual soft landing
+- [x] First full nominal MPC landing + plots (`plot_full_mpc_landing()` in `scripts/plot_profile.py`): full closed loop runs start-to-finish without crashing, but with today's un-tuned weights the landing is **not soft** — touchdown at ≈49.39 m/s (worse than the PID baseline's 10.8 m/s), 30/83 real steps needed the step-38 fallback near the ground, ~10.2 avg IPOPT iterations/step thanks to warm-starting. `vz` accelerates downward at first (position-error term dominates), then starts braking too late once position error shrinks near the pad — confirming, over a full flight, the step 35/36 finding. **Resolved in step 47** (§6.11): not a weight-tuning issue — the soft terminal cost let the controller defer landing indefinitely; a hard terminal constraint + shrinking horizon fixes it (0.95 m/s touchdown, 0.77m position error, 0 solver failures), prototype-verified, integration pending
 
 </details>
 
 <details open>
-<summary><b>🔧 Phase E — Experiments and robustness</b> (6/11, current phase)</summary>
+<summary><b>🔧 Phase E — Experiments and robustness</b> (7/11, current phase)</summary>
 
 - [x] Standardized scenarios & metrics for PID and MPC (`experiments/runners.py`: `nominal_scenario()`, `run_pid()`/`run_mpc()` returning the same `landing_summary` format for both): verified to exactly reproduce the already-confirmed PID (steps 27-29) and MPC (step 39) results
 - [x] Migrate parameters to `configs/*.yaml` (`VehicleParams`/`MpcWeights` gained an optional `config_path` arg + `_load_from_yaml()`, defaulting to unchanged behavior): verified 14/14 fields identical between hardcoded defaults and `configs/vehicle_nominal.yaml`/`configs/mpc_weights_default.yaml`
-- [x] Experiment A — nominal PID vs MPC comparison (`experiments/experiment_a.py`): side-by-side table confirms PID currently wins on every metric except fuel (position error 30.58 vs 57.39 m, touchdown speed 10.83 vs **49.39 m/s**, fuel 1772 vs 724 kg) — an honest baseline *before* MPC weight tuning (step 47), not a final verdict
+- [x] Experiment A — nominal PID vs MPC comparison (`experiments/experiment_a.py`): side-by-side table confirms PID currently wins on every metric except fuel (position error 30.58 vs 57.39 m, touchdown speed 10.83 vs **49.39 m/s**, fuel 1772 vs 724 kg) — an honest baseline *before* the step 47 fix, not a final verdict (post-fix MPC touchdown speed is 0.95 m/s, well under PID's 10.83 m/s — see step 47 below)
 - [x] Add wind (`environment.py`: `Wind` class, constant disturbance acceleration — wired into the REAL simulator only, never the MPC's internal model): verified against analytic kinematics in isolation, then via `experiment_a_wind()` — PID position error 30.58→16.32 m (wind coincidentally cancels PID's existing overshoot bias, not a general improvement), MPC 57.39→66.74 m, fuel essentially unchanged for both (purely lateral disturbance)
 - [x] Initial velocity/mass error variants — Experiment C (`experiments/experiment_c.py`: `scenario_with_initial_error()`, `experiment_c_initial_error()`): rocket actually starts falling 10 m/s faster (vz=-60) and 500 kg lighter (24500 kg) than the nominal scenario assumed, controller sees the real starting state correctly — PID position error 30.58→11.08 m but touchdown speed 10.83→**25.01 m/s** (less time to brake), MPC 57.39→56.78 m / 49.39→54.29 m/s; a genuine speed/accuracy trade-off, not an inconsistency
 - [x] MPC-vs-"real" model mismatch (`experiment_a_model_mismatch()`): real engine 10% weaker (360 vs 400 kN) and 10% less efficient (Isp 270 vs 300s) than the MPC's internal model assumes — PID barely changes (30.58→31.05 m, 10.83→10.54 m/s, since it has no engine model to be wrong about, just +200 kg fuel from worse Isp), MPC's touchdown speed gets **11.6% worse** (49.39→55.14 m/s) specifically because it plans braking assuming thrust it doesn't actually have — textbook plant-model mismatch
-- [ ] Experiment D — MPC parameter sweep (horizon, weights, frequency) ← **next step** *(reordered before Experiment B — see below)*
-- [ ] Experiment B — initial-condition success/failure map *(deliberately after Experiment D: the success/failure threshold is unreachable with today's untuned MPC weights, so the map would be uniformly "failure" and uninformative until tuning happens first — see `thesis/docx/rozdzial_07_metodyka.md` §7.4)*
+- [x] Experiment D — MPC parameter sweep + structural fix, **both parts verified in the real codebase** (`check_step47_part1.py`, `check_step47_part2.py`). Part 1 (`metrics.py`'s new `landed` flag + `experiments/experiment_d.py` — all 18 sweep rows reproduce the prototype exactly): swept the 5 parameters the thesis plan names (horizon, terminal weight, control-change penalty, control frequency, tilt limit) one at a time — **none** of them meaningfully improve real touchdown speed (stays in the 45-68 m/s "crash" band); the one parameter that does (`Qv`, velocity-error weight) hits a ceiling where pushing further just makes the sim run out of fuel hovering instead of landing (that's what the new `landed` flag catches). Part 2 — the actual fix: a **hard terminal constraint** + a **shrinking horizon** (instead of relying on cost weights alone, exactly what `plan_original.md` itself warned was needed) achieves a genuine soft landing with *unchanged* weights: **0.953 m/s touchdown, 0.772m position error, 0 solver failures** — the first config in the whole project to meet the §7.1 soft-landing bar. Caught two real transcription bugs along the way (`<=` misplaced inside `ca.sumsqr()`; a typo'd duplicate `shrink_horizon_to` parameter that silently disabled the horizon-shrinking entirely). Full derivation: [`rozdzial_06_mpc.md`](thesis/docx/rozdzial_06_mpc.md) §6.11
+- [ ] Experiment B — initial-condition success/failure map ← **next step** *(deliberately after Experiment D — see `thesis/docx/rozdzial_07_metodyka.md` §7.4. Open question once run: does the step-47 fix's horizon/tolerance, tuned for one nominal scenario, generalize across the grid?)*
 - [ ] Experiment E — Monte Carlo campaign
 - [ ] *(stretch)* Aerodynamic drag
 - [ ] *(stretch)* Orientation / body-tilt extension

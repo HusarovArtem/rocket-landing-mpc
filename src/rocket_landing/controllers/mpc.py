@@ -247,7 +247,8 @@ def add_state_and_actuator_constraints(opti, X, U, params):
     opti.subject_to(mass >= params.dry_mass)
 
 
-def solve_open_loop_trajectory(params, weights, target, x0, N, dt, u_prev=None, X_guess=None, U_guess=None):
+def solve_open_loop_trajectory(params, weights, target, x0, N, dt,
+                               u_prev=None, X_guess=None, U_guess=None, eps_r=None, eps_v=None):
     """
     Builds and solves ONE full MPC optimization problem, from a single
     starting state x0, over a fixed horizon of N steps - NOT the
@@ -291,6 +292,12 @@ def solve_open_loop_trajectory(params, weights, target, x0, N, dt, u_prev=None, 
     # would be free to be anything the optimizer likes
     opti.subject_to(X[:,0] == x0)
 
+    if eps_r is not None:
+        pos_err_N = X[0:3, N] - target.position
+        opti.subject_to(ca.sumsqr(pos_err_N) <= eps_r**2) # True 3d distance, not a per-axis box
+    if eps_v is not None:
+        opti.subject_to(ca.sumsqr(X[3:6, N]) <= eps_v**2)
+
     initial_mass = x0[6]
 
     cost = 0
@@ -321,7 +328,8 @@ def solve_open_loop_trajectory(params, weights, target, x0, N, dt, u_prev=None, 
     return sol.value(X), sol.value(U), sol.stats()["iter_count"]
 
 
-def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000, warm_start= True, wind=None, real_params=None):
+def simulate_mpc(state0, params, weights, target, N, dt,
+                 max_steps=1000, warm_start= True, wind=None, real_params=None,  shrink_horizon_to=None, eps_r=None, eps_v=None):
     """
     The receding-horizon MPC loop (step 36): at EVERY real time step,
     solve a FRESH NLP from the rocket's current REAL state, apply ONLY
@@ -366,15 +374,24 @@ def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000, warm_st
 
     for i in range(max_steps):
         current_state = states[-1] # last element (current)
+        current_N = N if shrink_horizon_to is None else max(shrink_horizon_to, N - i)
+
+        # if the horizon size CHANGED since the last solve, the warm-start
+        # guess from last time has the wrong shape - drop it, same idea as
+        # X_guess/U_guess already being reset on solver failure today
+        if X_guess is not None and X_guess.shape[1] != current_N + 1:
+            X_guess = None
+            U_guess = None
 
         try:
             X_opt, U_opt, iters = solve_open_loop_trajectory(
-                params, weights, target, current_state, N, dt,
-                u_prev=u_prev, X_guess=X_guess, U_guess=U_guess
+                params, weights, target, current_state, current_N, dt,
+                u_prev=u_prev, X_guess=X_guess, U_guess=U_guess,
+                eps_r=eps_r, eps_v=eps_v
             )
             failed = False
         except RuntimeError as e:
-            logger.warning("MPC solve failed at real step: %d: %s", i, e)
+            logger.warning("MPC solve failed at real step: %d (infeasible) - using fallback control", i)
             failed = True
             iters = 0
             X_opt, U_opt = None, None

@@ -45,5 +45,6 @@ def landing_summary(times, states, target, initial_mass):
         "flight_time_s": float(times[-1]),
         "position_error_m": landing_position_error(final_state, target),
         "touchdown_speed_mps": landing_speed(final_state),
-        "fuel_used_kg": fuel_used(initial_mass, final_state)
+        "fuel_used_kg": fuel_used(initial_mass, final_state),
+        "landed": bool(final_state[2]<= 0.0)
     }

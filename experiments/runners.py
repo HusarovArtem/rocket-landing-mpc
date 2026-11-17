@@ -1,11 +1,13 @@
 import numpy as np
 
-from rocket_landing.controllers.mpc import simulate_mpc
+from rocket_landing.controllers.mpc import simulate_mpc, MpcWeights
 from rocket_landing.controllers.pid import PIDController
 from rocket_landing.metrics import landing_summary
 from rocket_landing.params import VehicleParams
 from rocket_landing.reference import LandingTarget
 from rocket_landing.simulation import simulate_pid
+from scripts.steps.check_step32 import weights
+
 
 def nominal_scenario():
     """
@@ -43,7 +45,7 @@ def run_pid(state0, params, dt=0.05, wind=None):
     return times, states, summary
 
 
-def run_mpc(state0, params, weights, N=30, dt=0.1, max_steps=2000, warm_start=True, wind=None, real_params=None):
+def run_mpc(state0, params, weights, N=30, dt=0.1, max_steps=2000, warm_start=True, wind=None, real_params=None, shrink_horizon_to=None, eps_r=None, eps_v=None):
     """
     Runs the full receding-horizon MPC loop (steps 36-38) on `state0`
     and returns (times, states, summary) - the SAME landing_summary()
@@ -55,7 +57,8 @@ def run_mpc(state0, params, weights, N=30, dt=0.1, max_steps=2000, warm_start=Tr
 
     times, states, controls, iter_counts, solve_failed = simulate_mpc(
         state0, params, weights, target, N, dt, max_steps=max_steps,
-        warm_start=warm_start, wind=wind, real_params=real_params
+        warm_start=warm_start, wind=wind, real_params=real_params,
+        shrink_horizon_to=shrink_horizon_to, eps_r=eps_r, eps_v=eps_v
     )
 
     summary = landing_summary(times, states, target, state0[6])

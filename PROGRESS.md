@@ -365,9 +365,57 @@ fallback → wykresy) działa od startu do końca bez błędów.* ✅ ZALICZONY
       Kolejność zamieniona względem numeracji (ale nie samą numerację, by
       nie zepsuć odwołań "krok 46/47" gdzie indziej). Decyzja i
       uzasadnienie opisane też w `thesis/docx/rozdzial_07_metodyka.md` §7.4.
-- [ ] 47. Eksperyment D: sweep parametrów MPC (horyzont, wagi, częstotliwość
-      sterowania). **WYKONAĆ PRZED krokiem 46** (patrz notatka wyżej).
-      **← następny krok**
+- [x] 47. Eksperyment D: sweep parametrów MPC (horyzont, wagi, częstotliwość
+      sterowania) + rozwiązanie strukturalne. **ZWERYFIKOWANE W GŁÓWNYM
+      KODZIE PROJEKTU, CZĘŚĆ 1 I CZĘŚĆ 2** (`check_step47_part1.py`,
+      `check_step47_part2.py`) ✅.
+
+      **Część 1 (sweep wag/horyzontu/kąta, scenariusz nominalny):** z
+      5 parametrów z planu pracy żaden nie poprawia realnie prędkości
+      przyziemienia (pozostaje 45-68 m/s - zderzenie); `Qv` (poza listą
+      z planu) jest jedyną realną dźwignią - `Qv=50` daje PRAWDZIWE
+      lądowanie przy 19,06 m/s (z 49,39 m/s), kosztem gorszej pozycji
+      (57,39→78,98 m) i więcej paliwa (724→1188 kg). Dalsze zwiększanie
+      `Qv` (80, 100) albo `N`/`dt` NIE poprawia dalej - przechodzi w
+      ARTEFAKT: regulator "zawisa" blisko ziemi i zużywa CAŁE paliwo
+      (3000 kg) nie docierając do lądowiska (stąd potrzeba pola `landed`
+      powyżej). Zweryfikowane: wynik w głównym kodzie 18/18 wierszy
+      identyczny z prototypem co do 2 miejsc po przecinku ✓.
+
+      **Część 2 (rozwiązanie strukturalne - twarde ograniczenie końcowe
+      + horyzont ściągany, zamiast dalszego doboru wag):** wagi
+      `MpcWeights()` NIEZMIENIONE względem placeholderów z kroku 32.
+      Wynik na scenariuszu nominalnym (`check_step47_part2.py`): błąd
+      pozycji **0,7724 m** (próg §7.1: ≤2 m) ✓, prędkość przyziemienia
+      **0,9526 m/s** (próg: ≤1 m/s) ✓, paliwo 1897,99 kg (budżet 3000 kg),
+      **0 niepowodzeń solvera**. Pierwsza konfiguracja w całym projekcie
+      (kroki 36-47) faktycznie spełniająca kryterium miękkiego lądowania
+      z rozdziału 7.1 - i jedyna bez ani jednego niepowodzenia solvera.
+      Mechanizm (dlaczego same wagi nie wystarczały, dlaczego to
+      rozwiązuje problem) w pełni opisany w `thesis/docx/rozdzial_06_mpc.md`
+      §6.11 - dokładnie odpowiada ostrzeżeniu z `plan_original.md` §3.1
+      (ok. linii 225-228) o konieczności twardych ograniczeń końcowych,
+      nie tylko wag kosztu. Po drodze DWA błędy transkrypcji w
+      `controllers/mpc.py`: (1) `ca.sumsqr(pos_err_N <= eps_r**2)` -
+      porównanie `<=` omyłkowo WEWNĄTRZ `sumsqr(...)` zamiast na jego
+      wyniku (poprawnie: `ca.sumsqr(pos_err_N) <= eps_r**2`); (2) literówka
+      `shrink_hozizon_to` (brak drugiego "r") zadeklarowana JAKO OSOBNY
+      parametr obok poprawnie nazwanego `shrink_horizon_to` - ciało funkcji
+      czytało tylko literówkę (zawsze `None`), więc horyzont NIGDY się nie
+      ściągał, mimo że `run_mpc()` poprawnie przekazywał `shrink_horizon_to=10`.
+      Dodatkowo usunięto nieużywany, efekt-uboczny-generujący import
+      `from scripts.steps.check_step32 import weights` z `runners.py` i
+      `experiment_d.py` (odpowiadał za niechciane `stage_cost .../
+      terminal_cost: ...` na początku każdego uruchomienia).
+
+      **Decyzja dla kroków 46/48 i dalej:** ta konfiguracja zastępuje
+      placeholdery z kroku 32 I samo "Qv=50" jako zalecane MPC dla
+      wszystkich dalszych eksperymentów: `run_mpc(..., N=240, dt=0.1,
+      shrink_horizon_to=10, eps_r=2.0, eps_v=0.15)`. Otwarte pytanie (do
+      zbadania w kroku 46): czy `N_total=240`/`eps_v=0,15`, dobrane dla
+      JEDNEGO scenariusza nominalnego, uogólniają się na całą siatkę
+      warunków początkowych.
+      **← następny krok: 46**
 - [ ] 48. Eksperyment E: Monte Carlo (ziarno RNG zapisane), statystyki i wykresy.
 - [ ] 49. (Jeśli czas pozwoli) opór aerodynamiczny.
 - [ ] 50. (Jeśli czas pozwoli) rozszerzenie o orientację/kąt nachylenia korpusu.
