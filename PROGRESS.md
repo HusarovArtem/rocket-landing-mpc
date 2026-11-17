@@ -331,11 +331,43 @@ fallback → wykresy) działa od startu do końca bez błędów.* ✅ ZALICZONY
       czasu na cykl bocznego przeregulowania PID (mniejszy błąd pozycji), ale
       TEŻ mniej czasu na wyhamowanie dodatkowej prędkości (znacznie ostrzejsze
       przyziemienie) — rzeczywisty trade-off, nie niekonsekwencja.
-- [ ] 45. Niezgodność modelu MPC vs "prawdziwego" symulatora (inny ciąg/Isp).
-      **← następny krok**
+- [x] 45. Niezgodność modelu MPC vs "prawdziwego" symulatora (inny ciąg/Isp):
+      `simulate_mpc()` (`controllers/mpc.py`) i `run_mpc()` (`experiments/
+      runners.py`) dostały opcjonalny argument `real_params` (domyślnie
+      `None` → równy `params`, zero zmian w istniejących wywołaniach) —
+      `params` to teraz WYŁĄCZNIE to, w co wierzy NLP MPC przy planowaniu
+      (`solve_open_loop_trajectory`), `real_params` to rzeczywista fizyka
+      (`rk4_step`, `clamp_control`, próg `dry_mass`) — zgodnie z zasadą
+      rozdzielenia modelu MPC od symulatora (rozdział 3.5/6.2). Nowa
+      funkcja `experiment_a_model_mismatch()` w `experiments/experiment_a.py`
+      (kolejny wariant Eksperymentu A, jak wiatr w kroku 43, nie osobny
+      eksperyment literowy): rzeczywisty silnik o 10% słabszy (360 kN
+      zamiast 400 kN) i o 10% mniej efektywny (Isp=270s zamiast 300s) niż
+      zakłada model MPC. Zweryfikowane (`scripts/steps/check_step45.py`):
+      wynik użytkownika DOKŁADNIE zgodny z wyliczeniem referencyjnym — PID
+      (na rzeczywistym, słabszym silniku): błąd pozycji 31,05 m, prędkość
+      przyziemienia 10,54 m/s, paliwo 1972,33 kg; MPC (niezgodność modelu):
+      błąd pozycji 58,94 m, prędkość przyziemienia 54,29→**55,14 m/s**,
+      paliwo 739,89 kg ✓. Wzorzec (prawdziwy, nie błąd): PID ledwo się
+      zmienia (30,58→31,05 m; 10,83→10,54 m/s) — nie ma modelu silnika, o
+      którym mógłby się mylić, tylko reaguje na bieżącą fizykę; jego
+      zużycie paliwa jednak rośnie (+200 kg) czysto z powodu gorszego Isp.
+      MPC pogarsza się szczególnie na prędkości przyziemienia (+11,6%) —
+      planuje hamowanie zakładając do 400 kN, a rzeczywisty silnik ucina
+      do 360 kN akurat w fazie agresywnego hamowania, więc rzeczywiste
+      wyhamowanie nie dogania planu — podręcznikowy efekt niezgodności
+      modelu z rzeczywistością (plant-model mismatch).
 - [ ] 46. Eksperyment B: siatka warunków początkowych, mapa sukces/porażka.
+      **WYKONAĆ PO kroku 47** — mapa sukces/porażka potrzebuje sensownego
+      progu (plan: błąd lądowania ≤2 m, prędkość przyziemienia ≤1 m/s), a
+      przy dzisiejszych nienastrojonych wagach MPC nigdy go nie spełnia —
+      cała siatka wyszłaby jako "porażka" wszędzie i nic by nie pokazała.
+      Kolejność zamieniona względem numeracji (ale nie samą numerację, by
+      nie zepsuć odwołań "krok 46/47" gdzie indziej). Decyzja i
+      uzasadnienie opisane też w `thesis/docx/rozdzial_07_metodyka.md` §7.4.
 - [ ] 47. Eksperyment D: sweep parametrów MPC (horyzont, wagi, częstotliwość
-      sterowania).
+      sterowania). **WYKONAĆ PRZED krokiem 46** (patrz notatka wyżej).
+      **← następny krok**
 - [ ] 48. Eksperyment E: Monte Carlo (ziarno RNG zapisane), statystyki i wykresy.
 - [ ] 49. (Jeśli czas pozwoli) opór aerodynamiczny.
 - [ ] 50. (Jeśli czas pozwoli) rozszerzenie o orientację/kąt nachylenia korpusu.

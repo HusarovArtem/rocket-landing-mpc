@@ -43,7 +43,7 @@ def run_pid(state0, params, dt=0.05, wind=None):
     return times, states, summary
 
 
-def run_mpc(state0, params, weights, N=30, dt=0.1, max_steps=2000, warm_start=True, wind=None):
+def run_mpc(state0, params, weights, N=30, dt=0.1, max_steps=2000, warm_start=True, wind=None, real_params=None):
     """
     Runs the full receding-horizon MPC loop (steps 36-38) on `state0`
     and returns (times, states, summary) - the SAME landing_summary()
@@ -54,8 +54,8 @@ def run_mpc(state0, params, weights, N=30, dt=0.1, max_steps=2000, warm_start=Tr
     target = LandingTarget()
 
     times, states, controls, iter_counts, solve_failed = simulate_mpc(
-        state0, params, weights, target, N, dt, max_steps=max_steps, warm_start=warm_start, wind=wind
-
+        state0, params, weights, target, N, dt, max_steps=max_steps,
+        warm_start=warm_start, wind=wind, real_params=real_params
     )
 
     summary = landing_summary(times, states, target, state0[6])

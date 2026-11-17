@@ -321,7 +321,7 @@ def solve_open_loop_trajectory(params, weights, target, x0, N, dt, u_prev=None, 
     return sol.value(X), sol.value(U), sol.stats()["iter_count"]
 
 
-def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000, warm_start= True, wind=None):
+def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000, warm_start= True, wind=None, real_params=None):
     """
     The receding-horizon MPC loop (step 36): at EVERY real time step,
     solve a FRESH NLP from the rocket's current REAL state, apply ONLY
@@ -361,6 +361,9 @@ def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000, warm_st
     X_guess = None
     U_guess = None
 
+    if real_params is None:
+        real_params = params
+
     for i in range(max_steps):
         current_state = states[-1] # last element (current)
 
@@ -381,14 +384,14 @@ def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000, warm_st
                 control = u_prev
             else:
                 control = np.array([params.initial_mass * params.g, 0.0, 0.0])
-            control = clamp_control(control, params)
+            control = clamp_control(control, real_params)
         else:
-            control = clamp_control(U_opt[:, 0], params)
+            control = clamp_control(U_opt[:, 0], real_params)
 
         solve_failed.append(failed)
         iter_counts.append(iters)
 
-        next_state = rk4_step(current_state, control, params, dt, wind)
+        next_state = rk4_step(current_state, control, real_params, dt, wind)
         times.append(times[-1] + dt)
         states.append(next_state)
         controls.append(control)
@@ -404,7 +407,7 @@ def simulate_mpc(state0, params, weights, target, N, dt, max_steps=1000, warm_st
 
         if next_state[2] <= 0.0: # z <= 0.0
             break
-        if next_state[6] <= params.dry_mass: # mass <= dry mass
+        if next_state[6] <= real_params.dry_mass: # mass <= dry mass
             break
 
     return np.array(times), np.array(states), np.array(controls), iter_counts, solve_failed

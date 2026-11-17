@@ -47,3 +47,37 @@ def experiment_c_initial_error():
               f"{mpc_nominal[key]:>16.2f}{mpc_error[key]:>16.2f}")
 
     return pid_nominal, pid_error, mpc_nominal, mpc_error
+
+def experiment_c_model_mismatch():
+    """
+    The REAL engine is weaker and less effictient than the
+    MPC'c internal model assumes: 10% less max thrust
+    (360 kN instead of 400 kN) and 10% rowse Isp (270s instead of 300s),
+    i.e. burns more fuel for the same thrust than the model predicts)
+    This models a controller flying with an outdated/approximate concern.
+
+
+    PID is run on REAL (weaker) engine directly - PID has no internal
+    engine model to be WRING about, it just reacts to the true physics as
+    given, so this is really "PID o a weaker rocket", not "PID fooled by a bad model"
+    (there's no PID equivalent of plant-model mismatch here).
+    """
+    model_params = VehicleParams() # what the MPC's NLP believes
+    real_params = VehicleParams()  # what the engine actuallu does
+    real_params.max_thrust = 0.9 * model_params.max_thrust
+    real_params.isp = 0.9 * model_params.isp
+
+    weights = MpcWeights()
+    state0 = nominal_scenario()
+
+    _, _, pid_real = run_pid(state0, real_params)
+    _, _, mpc_mismatch = run_mpc(state0, model_params, weights, real_params=real_params)
+
+    print(f"{'Metric':<28}{'PID (real engine)':>20}{'MPC (model mismatch)':>22}")
+
+    for key, label in (("position_error_m", "Position error [m]"),
+                       ("touchdown_speed_mps", "Touchdown speed [m/s"),
+                       ("fuel_used_kg", "Fuel used [kg]")):
+        print(f"{label:<28}{pid_real[key]:>20.2f}{mpc_mismatch[key]:>22.2f}")
+
+    return pid_real, mpc_mismatch
