@@ -1,0 +1,3 @@
+from experiments.experiment_b import experiment_b_grid_map
+
+experiment_b_grid_map()

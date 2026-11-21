@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 44**
+**AKTUALNY KROK: 48**
 
 ## Faza A — Setup i porządki
 
@@ -357,14 +357,66 @@ fallback → wykresy) działa od startu do końca bez błędów.* ✅ ZALICZONY
       do 360 kN akurat w fazie agresywnego hamowania, więc rzeczywiste
       wyhamowanie nie dogania planu — podręcznikowy efekt niezgodności
       modelu z rzeczywistością (plant-model mismatch).
-- [ ] 46. Eksperyment B: siatka warunków początkowych, mapa sukces/porażka.
-      **WYKONAĆ PO kroku 47** — mapa sukces/porażka potrzebuje sensownego
-      progu (plan: błąd lądowania ≤2 m, prędkość przyziemienia ≤1 m/s), a
-      przy dzisiejszych nienastrojonych wagach MPC nigdy go nie spełnia —
-      cała siatka wyszłaby jako "porażka" wszędzie i nic by nie pokazała.
-      Kolejność zamieniona względem numeracji (ale nie samą numerację, by
-      nie zepsuć odwołań "krok 46/47" gdzie indziej). Decyzja i
-      uzasadnienie opisane też w `thesis/docx/rozdzial_07_metodyka.md` §7.4.
+- [x] 46. Eksperyment B: siatka warunków początkowych, mapa sukces/porażka.
+      Nowy plik `experiments/experiment_b.py` (`_state0_for()`,
+      `_meets_soft_landing_bar()`, `run_initial_condition_grid()`,
+      `plot_success_failure_map()`, `experiment_b_grid_map()`), uruchomiony
+      jako `scripts/steps/check_step46.py` — siatka 4×4 = 16 punktów
+      (`r0 ∈ {10, 75, 150, 200} m`, `vz0 ∈ {-30, -45, -60, -80} m/s`,
+      `r0=0` celowo wykluczone — degeneracja numeryczna NLP, nie prawdziwa
+      niewykonalność, opisana w komentarzach kodu), każdy punkt uruchomiony
+      OSOBNO dla PID i dla MPC (konfiguracja z kroku 47: `N=240, dt=0.1,
+      shrink_horizon_to=10, eps_r=2.0, eps_v=0.15`), łącznie 32 pełne
+      zamknięte loty. Cały przebieg zajął ~7379 s (~123 min, ~2 h) —
+      zgodnie z wcześniejszym oszacowaniem "godziny, nie minuty".
+
+      **Wynik PID: 0/16 (0%) spełnia próg §7.1.** PID NIE SPEŁNIA
+      kryterium miękkiego lądowania w ANI JEDNYM z 16 testowanych
+      warunków początkowych — prędkość przyziemienia zawsze znacznie
+      przekracza próg 1 m/s (od 4,59 do 52,86 m/s), niezależnie od
+      odległości bocznej czy prędkości opadania. Błąd pozycji bywa
+      przypadkowo mały (np. 1,28 m przy r0=10/vz0=-60) — ten sam efekt
+      "przypadkowego złapania w cyklu przeregulowania" co w kroku 44 —
+      ale prędkość przyziemienia (prawdziwy wskaźnik bezpieczeństwa) i
+      tak dyskwalifikuje ten punkt (22,97 m/s).
+
+      **Wynik MPC: 7/16 (44%) spełnia próg §7.1** — sukces SILNIE
+      SKONCENTROWANY blisko lądowiska: wszystkie 4 punkty przy r0=10 m
+      spełniają próg niezależnie od prędkości opadania (-30 do -80 m/s).
+      Przy r0=75 m sukces częściowy (2/4: -45 i -60 m/s; -30 m/s pada o
+      włos, błąd pozycji 2,003 m vs próg 2,0 m; -80 m/s zawodzi wyraźnie,
+      6,50 m / 2,86 m/s). Przy r0=150 m udaje się tylko najwolniejszy
+      przypadek -30 m/s (1/4). Przy r0=200 m — ŻADEN punkt się nie udaje
+      (0/4), choć najwolniejszy przypadek jest bliski (błąd pozycji
+      0,92 m w porządku, prędkość 1,30 m/s tuż nad progiem 1,0 m/s).
+
+      **Odpowiedź na otwarte pytanie z kroku 47/rozdziału 7.1: NIE** —
+      konfiguracja `N_total=240`/`eps_v=0,15`, dobrana dla JEDNEGO
+      scenariusza nominalnego (r0≈112 m, vz0=-50 m/s), NIE uogólnia się
+      jednolicie na całą siatkę. Generalizuje się dobrze blisko
+      lądowiska, degraduje się z odległością boczną, zwłaszcza w
+      kombinacji z dużą prędkością opadania. Ważna korekta wcześniejszej
+      interpretacji: jednorazowa próba wykonalności NLP w pętli OTWARTEJ
+      (jedno rozwiązanie od stanu startowego) dla najtrudniejszego rogu
+      (r0=200, vz0=-80) wcześniej wyszła "wykonalna" (11,6 s) i została
+      błędnie odczytana jako dowód uogólnienia — wykonalność JEDNEGO
+      rozwiązania od t=0 NIE gwarantuje, że pętla MPC z przesuwanym
+      horyzontem (wielokrotne ponowne rozwiązywanie w czasie
+      rzeczywistym, z dryfem między kolejnymi rozwiązaniami) faktycznie
+      dowiezie rakietę do progu — ten właśnie punkt w zamkniętej pętli
+      zawodzi najbardziej dramatycznie (błąd pozycji 71,06 m, prędkość
+      14,72 m/s). Jedyne prawdziwe niepowodzenie solvera w całej siatce
+      (1 z kilkuset kroków rzeczywistych łącznie) wystąpiło właśnie w
+      trudnym rogu — r0=150/vz0=-80, krok 40 realny, INFEASIBLE,
+      zastosowany fallback, wynik mocno zdegradowany (34,13 m / 9,10 m/s).
+
+      Pełna tabela wyników (wszystkie 16 punktów × 2 regulatory) w
+      `thesis/docx/rozdzial_08_09_10_dodatki_szkielet.md` §8.2, wykres
+      mapy sukces/porażka zapisany jako `experiment_b_map.png`.
+
+      Drobna uwaga (nie blokująca): zapisany plik mapy ma literówkę w
+      nazwie u użytkownika (`expreriment_b_map.png` zamiast
+      `experiment_b_map.png`) — kosmetyczne.
 - [x] 47. Eksperyment D: sweep parametrów MPC (horyzont, wagi, częstotliwość
       sterowania) + rozwiązanie strukturalne. **ZWERYFIKOWANE W GŁÓWNYM
       KODZIE PROJEKTU, CZĘŚĆ 1 I CZĘŚĆ 2** (`check_step47_part1.py`,
@@ -411,12 +463,11 @@ fallback → wykresy) działa od startu do końca bez błędów.* ✅ ZALICZONY
       **Decyzja dla kroków 46/48 i dalej:** ta konfiguracja zastępuje
       placeholdery z kroku 32 I samo "Qv=50" jako zalecane MPC dla
       wszystkich dalszych eksperymentów: `run_mpc(..., N=240, dt=0.1,
-      shrink_horizon_to=10, eps_r=2.0, eps_v=0.15)`. Otwarte pytanie (do
-      zbadania w kroku 46): czy `N_total=240`/`eps_v=0,15`, dobrane dla
-      JEDNEGO scenariusza nominalnego, uogólniają się na całą siatkę
-      warunków początkowych.
-      **← następny krok: 46**
+      shrink_horizon_to=10, eps_r=2.0, eps_v=0.15)`. Otwarte pytanie o
+      uogólnienie na całą siatkę warunków początkowych — ODPOWIEDZIANE
+      empirycznie w kroku 46 (NIE uogólnia się jednolicie, p. krok 46).
 - [ ] 48. Eksperyment E: Monte Carlo (ziarno RNG zapisane), statystyki i wykresy.
+      **← następny krok**
 - [ ] 49. (Jeśli czas pozwoli) opór aerodynamiczny.
 - [ ] 50. (Jeśli czas pozwoli) rozszerzenie o orientację/kąt nachylenia korpusu.
 
