@@ -8,7 +8,7 @@
 
 ![status](https://img.shields.io/badge/status-in%20progress-yellow)
 ![phase](https://img.shields.io/badge/phase-D%20%7C%20MPC%20transition-blue)
-![progress](https://img.shields.io/badge/progress-47%2F57%20steps-orange)
+![progress](https://img.shields.io/badge/progress-48%2F57%20steps-orange)
 ![python](https://img.shields.io/badge/python-3.14-3776AB)
 ![solver](https://img.shields.io/badge/NLP-CasADi%20%2B%20IPOPT-informational)
 
@@ -36,14 +36,14 @@ It's deliberately **not** a 6-DoF, aerodynamically exact rocket simulator — se
 
 ## 📊 Progress
 
-**47 / 57 steps done — Phase D (MPC transition) complete, Phase E in progress.**
+**48 / 57 steps done — Phase D (MPC transition) complete, Phase E core experiments complete (only stretch goals left).**
 
 ```
 Phase A  Setup & housekeeping        ████████████████████ 8/8   ✅
 Phase B  Physics & simulator         ████████████████████ 14/14 ✅
 Phase C  Baseline PID controller     ████████████████████ 7/7   ✅
 Phase D  Transition to MPC (CasADi)  ████████████████████ 10/10 ✅
-Phase E  Experiments & robustness    ██████████████░░░░░░ 8/11  🔧 current
+Phase E  Experiments & robustness    ████████████████░░░░ 9/11  🔧 current
 Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░░░░░░░ 0/7
 ```
 
@@ -123,8 +123,8 @@ Phase F  Thesis writing & finish     ░░░░░░░░░░░░░░�
 - [x] MPC-vs-"real" model mismatch (`experiment_a_model_mismatch()`): real engine 10% weaker (360 vs 400 kN) and 10% less efficient (Isp 270 vs 300s) than the MPC's internal model assumes — PID barely changes (30.58→31.05 m, 10.83→10.54 m/s, since it has no engine model to be wrong about, just +200 kg fuel from worse Isp), MPC's touchdown speed gets **11.6% worse** (49.39→55.14 m/s) specifically because it plans braking assuming thrust it doesn't actually have — textbook plant-model mismatch
 - [x] Experiment D — MPC parameter sweep + structural fix, **both parts verified in the real codebase** (`check_step47_part1.py`, `check_step47_part2.py`). Part 1 (`metrics.py`'s new `landed` flag + `experiments/experiment_d.py` — all 18 sweep rows reproduce the prototype exactly): swept the 5 parameters the thesis plan names (horizon, terminal weight, control-change penalty, control frequency, tilt limit) one at a time — **none** of them meaningfully improve real touchdown speed (stays in the 45-68 m/s "crash" band); the one parameter that does (`Qv`, velocity-error weight) hits a ceiling where pushing further just makes the sim run out of fuel hovering instead of landing (that's what the new `landed` flag catches). Part 2 — the actual fix: a **hard terminal constraint** + a **shrinking horizon** (instead of relying on cost weights alone, exactly what `plan_original.md` itself warned was needed) achieves a genuine soft landing with *unchanged* weights: **0.953 m/s touchdown, 0.772m position error, 0 solver failures** — the first config in the whole project to meet the §7.1 soft-landing bar. Caught two real transcription bugs along the way (`<=` misplaced inside `ca.sumsqr()`; a typo'd duplicate `shrink_horizon_to` parameter that silently disabled the horizon-shrinking entirely). Full derivation: [`rozdzial_06_mpc.md`](thesis/docx/rozdzial_06_mpc.md) §6.11
 - [x] Experiment B — initial-condition success/failure map (`experiments/experiment_b.py`, `check_step46.py`), 4×4 grid (r0 ∈ {10,75,150,200}m × vz0 ∈ {-30,-45,-60,-80}m/s, 16 points × 2 controllers = 32 full closed-loop runs, ~123 min total): **PID meets the §7.1 soft-landing bar in 0/16 points (never)** — touchdown speed always far over 1 m/s regardless of starting condition. **MPC meets it in 7/16 (44%)**, but success is concentrated close to the pad — all 4 speeds succeed at r0=10m, only the slowest succeeds by r0=150m, and **none** succeed at r0=200m. Answers the open question from step 47: the fixed config (N=240, eps_v=0.15) tuned on one nominal scenario does **not** generalize uniformly — it degrades with lateral distance, especially combined with fall speed. Also corrected an earlier methodological error: a one-shot *open-loop* feasibility probe at the hardest corner (r0=200, vz0=-80) had suggested the config generalizes (feasible in 11.6s) — the real *closed-loop* run at that same point fails worst of all (71m error, 14.7 m/s touchdown), showing open-loop feasibility checks don't predict closed-loop performance. One genuine solver infeasibility occurred across the whole grid (r0=150, vz0=-80, step 40 — fallback applied, no crash). Full table: [`rozdzial_08_09_10_dodatki_szkielet.md`](thesis/docx/rozdzial_08_09_10_dodatki_szkielet.md) §8.2
-- [ ] Experiment E — Monte Carlo campaign ← **next step**
-- [ ] *(stretch)* Aerodynamic drag
+- [x] Experiment E — Monte Carlo campaign (`experiments/experiment_e.py`, `check_step48.py`), 20 random trials (seed=48, random start point + direction + fall speed + ±10% random engine thrust/Isp error, ~6.2 hours total): **PID meets the §7.1 bar in 0/20 (0%), MPC in 3/20 (15%)**. The headline finding: of MPC's 17 failures, **45% (9/20) are not crashes at all — they're a "ran out of fuel just short of the ground" artifact** (near-zero touchdown speed but `landed=False`), and every single one of those 9 trials — and in fact all 12 trials with `isp_frac < 1.0` — has the engine *less fuel-efficient* than MPC's internal model assumes. Since Isp directly sets fuel burn rate, an overestimated Isp means the real rocket burns fuel faster than planned, so it runs dry right before satisfying the step-47 hard terminal constraint and falls back to hovering until fuel hits zero. Genuine crashes (4/20) need high fall speed *and* a weak engine; near-misses (4/20) are mostly far-from-pad cases, consistent with step 46. Conclusion: the step-47 structural fix is solid under a matched model (0 artifacts in step 46's 16 no-mismatch trials) but specifically fragile to Isp underestimation, not thrust error or distance. Full breakdown: [`rozdzial_08_09_10_dodatki_szkielet.md`](thesis/docx/rozdzial_08_09_10_dodatki_szkielet.md) §8.5
+- [ ] *(stretch)* Aerodynamic drag ← **next step (optional — decide: continue stretch goals or move to Phase F)**
 - [ ] *(stretch)* Orientation / body-tilt extension
 
 </details>

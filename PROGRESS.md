@@ -11,7 +11,7 @@
 > po angielsku do ręcznego przepisania do właściwego pliku projektu. Po przepisaniu
 > i odpaleniu, zgłaszasz wynik, a ja odhaczam krok i podaję następny.
 
-**AKTUALNY KROK: 48**
+**AKTUALNY KROK: 49**
 
 ## Faza A — Setup i porządki
 
@@ -466,9 +466,76 @@ fallback → wykresy) działa od startu do końca bez błędów.* ✅ ZALICZONY
       shrink_horizon_to=10, eps_r=2.0, eps_v=0.15)`. Otwarte pytanie o
       uogólnienie na całą siatkę warunków początkowych — ODPOWIEDZIANE
       empirycznie w kroku 46 (NIE uogólnia się jednolicie, p. krok 46).
-- [ ] 48. Eksperyment E: Monte Carlo (ziarno RNG zapisane), statystyki i wykresy.
-      **← następny krok**
-- [ ] 49. (Jeśli czas pozwoli) opór aerodynamiczny.
+- [x] 48. Eksperyment E: Monte Carlo (ziarno RNG zapisane), statystyki i wykresy.
+      Nowy plik `experiments/experiment_e.py` (`_random_trial_inputs()`,
+      `_meets_soft_landing_bar()`, `run_monte_carlo_trials()`,
+      `print_mc_stats()`, `plot_mc_scatter()`, `experiment_e_monte_carlo()`),
+      uruchomiony jako `scripts/steps/check_step48.py` — 20 losowych prób
+      (ziarno `SEED=48`, zapisane w kodzie dla powtarzalności), każda z
+      losowym `r0 ∈ [10, 200] m`, losowym kątem kierunku (pełny okrąg, nie
+      stały stosunek jak w kroku 46), losowym `vz0 ∈ [-80, -30] m/s`, ORAZ
+      losowym błędem silnika (`thrust_frac`, `isp_frac` ∈ [0,9, 1,1]) —
+      spełnia wymaganie planu "losowe stany początkowe I parametry
+      modelu". PID lata na rzeczywistym (błędnym) silniku bezpośrednio,
+      MPC planuje na nominalnym modelu, ale fizyka jest rzeczywista
+      (`real_params`) — ten sam wzorzec co krok 45. 20 prób zamiast
+      100-300 z planu — uzasadnienie: jedna próba MPC w zamkniętej pętli
+      zajmuje średnio ~1117 s (zmierzone w kroku 46/48), 100-300 prób
+      zajęłoby 13-38+ godzin; 20 prób to świadomy, udokumentowany
+      kompromis (decyzja użytkownika). Całość zajęła **22 342,6 s
+      (~6,21 h)**, zgodnie z poprawioną (nie pierwotną) oceną czasu.
+
+      **Wynik PID: 0/20 (0%) spełnia próg §7.1** — ponownie, jak w kroku
+      46, PID nigdy nie ląduje miękko, niezależnie od warunków. Mediana
+      błędu pozycji 29,40 m (95. percentyl 99,28 m), mediana prędkości
+      przyziemienia 23,61 m/s (95. percentyl 43,57 m/s).
+
+      **Wynik MPC: 3/20 (15%) spełnia próg §7.1** (próby 0, 10, 13 —
+      wszystkie albo bardzo blisko lądowiska, albo z KORZYSTNYM błędem
+      silnika, czyli silnik w rzeczywistości silniejszy/wydajniejszy niż
+      zakłada model MPC). Pozostałe 17/20 porażek rozkładają się na TRZY
+      różne mechanizmy:
+
+      - **9/20 (45%) — artefakt wyczerpania paliwa blisko ziemi**
+        (prędkość przyziemienia ≈0,015-0,018 m/s, `fails≈9-10`,
+        `landed=False`) — NAJCZĘSTSZA przyczyna porażki MPC w tym
+        eksperymencie, częstsza niż prawdziwe zderzenia. Sprawdzono
+        korelację z błędem silnika: WSZYSTKIE 9 prób w tej kategorii
+        mają `isp_frac < 1,0` (silnik w rzeczywistości MNIEJ wydajny
+        paliwowo niż zakłada model MPC) — i w ogóle WSZYSTKIE 12 prób w
+        całej siatce z `isp_frac < 1,0` kończą się tym artefaktem albo
+        prawdziwym zderzeniem, ZERO sukcesów. Fizyczne wyjaśnienie:
+        `isp` ustala tempo spalania paliwa (`dm/dt = -T/(Isp·g0)`) —
+        nadszacowany `isp` w modelu MPC oznacza, że prawdziwa rakieta
+        pali paliwo SZYBCIEJ niż plan zakłada, więc paliwo kończy się
+        tuż PRZED dotarciem do ziemi: twarde ograniczenie końcowe staje
+        się niewykonalne w ściąganym horyzoncie pod koniec lotu,
+        regulator wielokrotnie wraca do sterowania zastępczego
+        "zawisu" (krok 38), rakieta po prostu wisi i traci paliwo, aż
+        skończy się ono NAD lądowiskiem.
+      - **4/20 (20%) — prawdziwe zderzenia** (duże błędy, dużo
+        niepowodzeń solvera: próby 5, 8, 11, 14) — wszystkie łączą dużą
+        prędkość opadania (|vz0| ≥ ~72 m/s) ze słabym silnikiem.
+      - **4/20 (20%) — "o włos" (bez niepowodzeń solvera, tylko
+        nieznacznie nad progiem): próby 6, 7, 12, 18 — przeważnie
+        duże `r0`, zgodnie z wzorcem z kroku 46.
+      - **3/20 (15%) — czyste sukcesy** (próby 0, 10, 13).
+
+      **Wniosek (ważny dla rozdziału 8.5/9):** rozwiązanie strukturalne z
+      kroku 47 (twarde ograniczenie końcowe + ściągany horyzont) działa
+      bardzo dobrze, gdy model MPC zgadza się z rzeczywistością (krok 46,
+      0 artefaktów na 16 prób), ale jest SPECYFICZNIE podatne na
+      NADSZACOWANIE `isp` w modelu — nie na błąd ciągu, nie na odległość
+      startu — bo to właśnie wyczerpanie paliwa, nie geometria, uderza w
+      twarde ograniczenie na samym końcu lotu.
+
+      Statystyki czasu obliczeń MPC: mediana 973,2 s, 95. percentyl
+      1741,1 s, maksimum 1921,1 s (próba 8). Pełne dane i wykres
+      rozrzutu (`experiment_e_scatter.png`) w
+      `thesis/docx/rozdzial_08_09_10_dodatki_szkielet.md` §8.5.
+- [ ] 49. (Jeśli czas pozwoli) opór aerodynamiczny. **← następny krok
+      (opcjonalny — do decyzji: kontynuować stretch goals 49/50, czy
+      przejść do Fazy F)**
 - [ ] 50. (Jeśli czas pozwoli) rozszerzenie o orientację/kąt nachylenia korpusu.
 
 *Punkt kontrolny Fazy E: pełna, powtarzalna matryca eksperymentów w
