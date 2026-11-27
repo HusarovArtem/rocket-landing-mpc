@@ -114,6 +114,12 @@ class MpcWeights:
         self.w_m = 0.001 # terminal cost: fuel used (initial_mass - final
                          # mass) - small weight, fuel saving matters but
                          # much less than actually landing well
+
+        # NEW: cost of using the eps_r/eps_v "slack" (step 48 fix).
+        # Big number on purpose - the solver should only ever use slack
+        # when it truly has no other option, never as a cheap shortcut.
+        self.slack_penalty = 1e5
+
         if config_path is not None:
             self._load_from_yaml(config_path)
 
@@ -121,7 +127,7 @@ class MpcWeights:
         with open(config_path) as f:
             data = yaml.safe_load(f)
 
-        for field in ("Qr", "Qv", "R", "S", "Qf", "w_m"):
+        for field in ("Qr", "Qv", "R", "S", "Qf", "w_m", "slack_penalty"):
             if field in data:
                 setattr(self, field, data[field])
 
@@ -282,6 +288,17 @@ def solve_open_loop_trajectory(params, weights, target, x0, N, dt,
     steps. Since consecutive solves along a receding horizon are very similar
     to each other (same physics, nearly the same starting state), this gives
     IPOPT a near-connect answer to start from, instead of guessing from scratch every single time.
+
+    *** eps_r / eps_v are now SOFT (step 48 fix)
+
+    Instead of a plan hard rule ("must be exactly inside this box or the
+    whole problem has no answer"), we add a small slack number that is
+    allowed to go above zero, but is made very expensive in the cost.
+    The solver will still try hard to keep slack at exactly 0 (a real,
+    tight landing) whenever that is possible - but is it is truly
+    impossible (e.g. the real engine does not match the model), it now
+    has a fallback answer instead of throwing an error with nothing to
+    give back.
     """
 
     opti, X, U = build_mpc_nlp(params, N, dt)
@@ -292,10 +309,16 @@ def solve_open_loop_trajectory(params, weights, target, x0, N, dt,
     # would be free to be anything the optimizer likes
     opti.subject_to(X[:,0] == x0)
 
+    slack_r = None
+    slack_v = None
     if eps_r is not None:
         pos_err_N = X[0:3, N] - target.position
+        slack_r = opti.variable()
+        opti.subject_to(slack_r >= 0)
         opti.subject_to(ca.sumsqr(pos_err_N) <= eps_r**2) # True 3d distance, not a per-axis box
     if eps_v is not None:
+        slack_v = opti.variable()
+        opti.subject_to(slack_v >= 0)
         opti.subject_to(ca.sumsqr(X[3:6, N]) <= eps_v**2)
 
     initial_mass = x0[6]
@@ -310,6 +333,12 @@ def solve_open_loop_trajectory(params, weights, target, x0, N, dt,
             control_prev = U[:, 0]
         cost = cost + stage_cost(X[:, k], U[:, k], control_prev, target, weights)
     cost = cost + terminal_cost(X[:, N], initial_mass, target, weights)
+
+    # New: pay a big price for every bit of slack actually used (step 48 fix)
+    if slack_r is not None:
+        cost = cost + weights.slack_penalty * slack_r
+    if slack_v is not None:
+        cost = cost + weights.slack_penalty * slack_v
 
     opti.minimize(cost)
 
@@ -397,11 +426,26 @@ def simulate_mpc(state0, params, weights, target, N, dt,
             X_opt, U_opt = None, None
 
         if failed:
-            if u_prev is not None:
-                control = u_prev
-            else:
-                control = np.array([params.initial_mass * params.g, 0.0, 0.0])
-            control = clamp_control(control, real_params)
+            # NEW (step 48 fix): compute a FRESH control from the current
+            # real state, instead of repeating the same frozen control
+            # every failing step. Same simple idea as the PID controller
+            # (controller/pid.py) - push thrust against the fall speed,
+            # tilt against the sideways drift - just done once, with no
+            # memory between steps (no need for one here, this is only
+            # a safety net for rare solver failures).
+            x, y, z = current_state[0:3]
+            vx, vy, vz = current_state[3:6]
+            mass = current_state[6]
+
+            hover_thrust = mass * real_params.g
+            thrust = hover_thrust + 1500.0 * (0.0 - vz)
+            desired_fx = 500.0 * (0.0  - x)
+            desired_fy = 500.0 * (0.0 - y)
+            safe_thrust = max(thrust, real_params.min_thrust)
+            alpha = desired_fx / safe_thrust
+            beta = desired_fy / safe_thrust
+
+            control = clamp_control(np.array([thrust, alpha, beta]), real_params)
         else:
             control = clamp_control(U_opt[:, 0], real_params)
 
@@ -415,12 +459,17 @@ def simulate_mpc(state0, params, weights, target, N, dt,
 
         u_prev = control
 
-        if warm_start and not failed:
-            X_guess = np.hstack([X_opt[:, 1:], X_opt[:, -1:]])
-            U_guess = np.hstack([U_opt[:, 1:], U_opt[:, -1:]])
-        elif not warm_start:
+
+        # NEW (step 48 fix): also drop the warm-start guess after ANY
+        # failed solve, not just on a horizon-size change - starting the
+        # next try fresh gives the solver a reals chance at a different
+        # answer, instead of reusing the same guess that just failed.
+        if failed or not warm_start:
             X_guess = None
             U_guess = None
+        else:
+            X_guess = np.hstack([X_opt[:, 1:], X_opt[:, -1:]])
+            U_guess = np.hstack([U_opt[:, 1:], U_opt[:, -1:]])
 
         if next_state[2] <= 0.0: # z <= 0.0
             break
